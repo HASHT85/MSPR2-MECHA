@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import numpy as np
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 
@@ -660,6 +660,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- API Key Authentication Middleware ---
+API_KEY = os.getenv("API_KEY", "")
+_PUBLIC_PATHS = {"/health", "/docs", "/openapi.json", "/redoc"}
+
+
+@app.middleware("http")
+async def api_key_middleware(request: Request, call_next) -> Response:
+    """Verifie la cle API si API_KEY est configuree."""
+    if API_KEY and request.url.path not in _PUBLIC_PATHS:
+        provided = request.headers.get("X-API-Key", "")
+        if provided != API_KEY:
+            return Response(
+                content='{"detail":"Unauthorized"}',
+                status_code=401,
+                media_type="application/json",
+            )
+    return await call_next(request)
 
 
 # ==============================================================================
