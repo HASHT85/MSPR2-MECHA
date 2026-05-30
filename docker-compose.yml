@@ -96,6 +96,9 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    volumes:
+      - ./data:/app/data:ro
+      - ./models:/app/models:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
       interval: 30s

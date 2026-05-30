@@ -193,38 +193,45 @@ def apply_custom_css():
 @st.cache_data(ttl=300)
 def load_data():
     """Charge le dataset MECHA depuis le fichier CSV."""
-    data_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "data", "processed", "mecha_dataset_processed.csv"
-    )
-    if os.path.exists(data_path):
-        df = pd.read_csv(data_path, parse_dates=["timestamp"])
-        return df
-    
-    # Fallback: chercher dans d'autres emplacements
-    alt_paths = [
+    # Chemins possibles selon l'environnement (local ou Docker)
+    possible_paths = [
+        os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data", "processed", "mecha_dataset_processed.csv"
+        ),
+        # Docker: data monte dans /app/data
+        "/app/data/processed/mecha_dataset_processed.csv",
+        # Docker: merged dataset
+        "/app/data/raw/mecha_merged_dataset.csv",
+        # Chemins relatifs locaux
         "data/processed/mecha_dataset_processed.csv",
         "../data/processed/mecha_dataset_processed.csv",
-        "c:/Projet/MSPR/MSPR2-MECHA/data/processed/mecha_dataset_processed.csv",
     ]
-    for path in alt_paths:
-        if os.path.exists(path):
-            return pd.read_csv(path, parse_dates=["timestamp"])
     
-    st.error("Dataset non trouve. Executez d'abord : python data/scripts/generate_data.py")
+    for path in possible_paths:
+        if os.path.exists(path):
+            df = pd.read_csv(path, parse_dates=["timestamp"], low_memory=False)
+            return df
+    
+    st.error("Dataset non trouve. Executez d'abord : python data/scripts/generate_data.py && python data/scripts/merge_datasets.py")
     return None
 
 
 @st.cache_data(ttl=300)
 def load_model_metrics():
     """Charge les metriques des modeles ML."""
-    metrics_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "models", "evaluation", "model_comparison.json"
-    )
-    if os.path.exists(metrics_path):
-        with open(metrics_path, "r") as f:
-            return json.load(f)
+    possible_paths = [
+        os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "models", "evaluation", "results", "all_models_metrics.json"
+        ),
+        "/app/models/evaluation/results/all_models_metrics.json",
+        "models/evaluation/results/all_models_metrics.json",
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                return json.load(f)
     return None
 
 
