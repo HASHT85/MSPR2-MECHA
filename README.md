@@ -45,16 +45,6 @@
   <img src="docs/images/dashboard_streamlit.png" alt="Dashboard Streamlit" width="800">
 </p>
 
-### API FastAPI — Documentation Swagger
-<p align="center">
-  <img src="docs/images/api_docs.png" alt="API Swagger" width="800">
-</p>
-
-### API — Health Check
-<p align="center">
-  <img src="docs/images/api_health.png" alt="API Health" width="800">
-</p>
-
 ### Grafana — Direction Générale (DG Groupe)
 <p align="center">
   <img src="docs/images/grafana_dg.png" alt="Grafana DG Groupe" width="800">
