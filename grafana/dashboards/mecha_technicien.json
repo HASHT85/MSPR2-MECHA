@@ -1,0 +1,92 @@
+{
+  "editable": true,
+  "graphTooltip": 1,
+  "panels": [
+    { "id": 100, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "type": "row", "title": "Alertes Maintenance - Equipe Technique" },
+    {
+      "id": 1, "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 }, "type": "stat",
+      "title": "Machines a Risque",
+      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 5 }, { "color": "#FF5252", "value": 15 }] } } },
+      "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS nb FROM v_machine_status WHERE downtime_risk > 0.5 AND (usine_id = '$usine' OR '$usine' = 'All');", "format": "table", "rawQuery": true, "refId": "A" }]
+    },
+    {
+      "id": 2, "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 }, "type": "stat",
+      "title": "RUL Critique (< 50 min)",
+      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 3 }, { "color": "#FF5252", "value": 10 }] } } },
+      "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS nb FROM v_machine_status WHERE predicted_remaining_life < 50 AND (usine_id = '$usine' OR '$usine' = 'All');", "format": "table", "rawQuery": true, "refId": "A" }]
+    },
+    {
+      "id": 3, "gridPos": { "h": 5, "w": 6, "x": 12, "y": 1 }, "type": "stat",
+      "title": "Surchauffe (> 100C)",
+      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 1 }, { "color": "#FF5252", "value": 5 }] } } },
+      "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS nb FROM v_machine_status WHERE temperature > 100 AND (usine_id = '$usine' OR '$usine' = 'All');", "format": "table", "rawQuery": true, "refId": "A" }]
+    },
+    {
+      "id": 4, "gridPos": { "h": 5, "w": 6, "x": 18, "y": 1 }, "type": "stat",
+      "title": "Maintenance Requise",
+      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 5 }, { "color": "#FF5252", "value": 20 }] } } },
+      "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS nb FROM v_machine_status WHERE maintenance_required = 1 AND (usine_id = '$usine' OR '$usine' = 'All');", "format": "table", "rawQuery": true, "refId": "A" }]
+    },
+    { "id": 101, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 }, "type": "row", "title": "Machines a Intervenir en Priorite" },
+    {
+      "id": 5, "gridPos": { "h": 12, "w": 24, "x": 0, "y": 7 }, "type": "table",
+      "title": "Plan d'Action Maintenance - Machines Critiques",
+      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "center", "cellOptions": { "type": "auto" }, "filterable": true } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "priorite" }, "properties": [{ "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 2 }, { "color": "#FF5252", "value": 3 }] } }] },
+          { "matcher": { "id": "byName", "options": "temperature" }, "properties": [{ "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 80 }, { "color": "#FF5252", "value": 100 }] } }] },
+          { "matcher": { "id": "byName", "options": "rul" }, "properties": [{ "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#FF5252", "value": null }, { "color": "#FFB300", "value": 50 }, { "color": "#00E676", "value": 200 }] } }] },
+          { "matcher": { "id": "byName", "options": "risque" }, "properties": [{ "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 0.3 }, { "color": "#FF5252", "value": 0.6 }] } }] },
+          { "matcher": { "id": "byName", "options": "action" }, "properties": [{ "id": "custom.width", "value": 250 }] }
+        ]
+      },
+      "options": { "showHeader": true, "cellHeight": "sm", "sortBy": [{ "desc": true, "displayName": "priorite" }] },
+      "targets": [{ "rawSql": "SELECT machine_id, usine_id, machine_profile AS profil, ROUND(temperature::numeric, 1) AS temperature, ROUND(vibration::numeric, 1) AS vibration, predicted_remaining_life::int AS rul, ROUND(downtime_risk::numeric, 3) AS risque, CASE WHEN downtime_risk > 0.7 OR predicted_remaining_life < 30 THEN 4 WHEN downtime_risk > 0.5 OR predicted_remaining_life < 50 THEN 3 WHEN downtime_risk > 0.3 OR temperature > 100 THEN 2 ELSE 1 END AS priorite, CASE WHEN downtime_risk > 0.7 OR predicted_remaining_life < 30 THEN 'ARRET IMMEDIAT - Intervention urgente' WHEN downtime_risk > 0.5 OR predicted_remaining_life < 50 THEN 'Planifier maintenance sous 24h' WHEN downtime_risk > 0.3 OR temperature > 100 THEN 'Surveiller - maintenance prochaine fenetre' ELSE 'RAS - Fonctionnement normal' END AS action FROM v_machine_status WHERE (usine_id = '$usine' OR '$usine' = 'All') ORDER BY priorite DESC, downtime_risk DESC;", "format": "table", "rawQuery": true, "refId": "A" }]
+    },
+    { "id": 102, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 }, "type": "row", "title": "Historique Pannes" },
+    {
+      "id": 6, "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 }, "type": "piechart",
+      "title": "Types de Pannes Rencontrees",
+      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
+      "options": { "pieType": "donut", "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false } },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } } },
+      "targets": [{ "rawSql": "SELECT failure_type, COUNT(*) AS nb FROM mecha_data WHERE failure_type != 'Normal' AND (usine_id = '$usine' OR '$usine' = 'All') GROUP BY failure_type ORDER BY nb DESC;", "format": "table", "rawQuery": true, "refId": "A" }]
+    },
+    {
+      "id": 7, "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 }, "type": "barchart",
+      "title": "Pannes par Profil Machine",
+      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 80, "gradientMode": "scheme" } } },
+      "targets": [{ "rawSql": "SELECT machine_profile AS profil, SUM(CASE WHEN maintenance_required = 1 THEN 1 ELSE 0 END)::int AS maintenances, SUM(CASE WHEN anomaly_flag = 1 THEN 1 ELSE 0 END)::int AS anomalies FROM mecha_data WHERE (usine_id = '$usine' OR '$usine' = 'All') GROUP BY machine_profile ORDER BY maintenances DESC;", "format": "table", "rawQuery": true, "refId": "A" }]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["mecha", "technicien", "maintenance"],
+  "templating": {
+    "list": [{
+      "name": "usine",
+      "type": "query",
+      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
+      "definition": "SELECT DISTINCT usine_id FROM mecha_data ORDER BY usine_id",
+      "query": "SELECT DISTINCT usine_id FROM mecha_data ORDER BY usine_id",
+      "current": { "text": "All", "value": "$__all" },
+      "refresh": 1,
+      "includeAll": true,
+      "allValue": "All",
+      "multi": false
+    }]
+  },
+  "time": { "from": "now-30d", "to": "now" },
+  "title": "MECHA Technicien - Plan Maintenance",
+  "uid": "mecha-technicien"
+}

@@ -1,166 +1,100 @@
 {
-  "annotations": { "list": [] },
   "editable": true,
-  "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "links": [],
   "panels": [
+    { "id": 100, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "type": "row", "title": "Vue Consolidee - Direction Generale" },
     {
-      "id": 1,
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
-      "type": "stat",
-      "title": "Machines Actives",
+      "id": 1, "gridPos": { "h": 5, "w": 4, "x": 0, "y": 1 }, "type": "stat",
+      "title": "TRS Global",
       "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 30 }, { "color": "green", "value": 40 }] }
-        }
-      },
+      "fieldConfig": { "defaults": { "unit": "percent", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#FF5252", "value": null }, { "color": "#FFB300", "value": 50 }, { "color": "#00E676", "value": 80 }] } } },
       "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
-      "targets": [{ "rawSql": "SELECT COUNT(DISTINCT machine_id) as active_machines FROM mecha_data WHERE machine_status = 1;", "format": "table", "rawQuery": true, "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT ROUND(COUNT(CASE WHEN machine_status = 1 THEN 1 END)::numeric / NULLIF(COUNT(DISTINCT machine_id), 0)::numeric * 100, 1) AS trs FROM v_machine_status;", "format": "table", "rawQuery": true, "refId": "A" }]
     },
     {
-      "id": 2,
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
-      "type": "stat",
-      "title": "Alertes Critiques",
-      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] }
-        }
-      },
-      "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
-      "targets": [{ "rawSql": "SELECT COUNT(DISTINCT machine_id) as critical_alerts FROM v_machine_status WHERE temperature > 100 OR predicted_remaining_life < 50;", "format": "table", "rawQuery": true, "refId": "A" }]
-    },
-    {
-      "id": 3,
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "type": "stat",
+      "id": 2, "gridPos": { "h": 5, "w": 4, "x": 4, "y": 1 }, "type": "stat",
       "title": "Taux Maintenance",
       "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "color": { "mode": "thresholds" },
-          "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 15 }] }
-        }
-      },
+      "fieldConfig": { "defaults": { "unit": "percent", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 5 }, { "color": "#FF5252", "value": 15 }] } } },
       "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
-      "targets": [{ "rawSql": "SELECT ROUND(AVG(maintenance_required)::numeric * 100, 1) as maintenance_rate FROM mecha_data;", "format": "table", "rawQuery": true, "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT ROUND(AVG(maintenance_required)::numeric * 100, 1) AS taux FROM mecha_data;", "format": "table", "rawQuery": true, "refId": "A" }]
     },
     {
-      "id": 4,
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "type": "stat",
-      "title": "RUL Moyen (min)",
+      "id": 3, "gridPos": { "h": 5, "w": 4, "x": 8, "y": 1 }, "type": "stat",
+      "title": "Taux Anomalies",
       "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "color": { "mode": "thresholds" },
-          "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "yellow", "value": 100 }, { "color": "green", "value": 200 }] }
-        }
-      },
+      "fieldConfig": { "defaults": { "unit": "percent", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 5 }, { "color": "#FF5252", "value": 10 }] } } },
       "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
-      "targets": [{ "rawSql": "SELECT ROUND(AVG(predicted_remaining_life)::numeric, 0) as avg_rul FROM mecha_data WHERE machine_status = 1;", "format": "table", "rawQuery": true, "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT ROUND(AVG(anomaly_flag)::numeric * 100, 1) AS taux FROM mecha_data;", "format": "table", "rawQuery": true, "refId": "A" }]
     },
     {
-      "id": 5,
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
-      "type": "barchart",
-      "title": "Temperature Moyenne par Usine",
+      "id": 4, "gridPos": { "h": 5, "w": 4, "x": 12, "y": 1 }, "type": "stat",
+      "title": "Machines Actives",
       "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "celsius",
-          "color": { "mode": "thresholds" },
-          "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 80 }, { "color": "red", "value": 100 }] },
-          "custom": { "fillOpacity": 80, "gradientMode": "scheme" }
-        }
-      },
-      "targets": [{ "rawSql": "SELECT u.nom as usine, ROUND(AVG(d.temperature)::numeric, 1) as temperature FROM mecha_data d JOIN mecha_usines u ON d.usine_id = u.usine_id GROUP BY u.nom ORDER BY u.nom;", "format": "table", "rawQuery": true, "refId": "A" }]
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#00D4FF", "value": null }] } } },
+      "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [{ "rawSql": "SELECT COUNT(DISTINCT machine_id) || ' / ' || (SELECT SUM(nb_machines) FROM mecha_usines) AS total FROM mecha_data;", "format": "table", "rawQuery": true, "refId": "A" }]
     },
     {
-      "id": 6,
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
-      "type": "barchart",
-      "title": "Vibration Moyenne par Usine",
+      "id": 5, "gridPos": { "h": 5, "w": 4, "x": 16, "y": 1 }, "type": "stat",
+      "title": "Usines",
       "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "color": { "mode": "thresholds" },
-          "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 40 }, { "color": "red", "value": 60 }] },
-          "custom": { "fillOpacity": 80, "gradientMode": "scheme" }
-        }
-      },
-      "targets": [{ "rawSql": "SELECT u.nom as usine, ROUND(AVG(d.vibration)::numeric, 1) as vibration FROM mecha_data d JOIN mecha_usines u ON d.usine_id = u.usine_id GROUP BY u.nom ORDER BY u.nom;", "format": "table", "rawQuery": true, "refId": "A" }]
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#7B61FF", "value": null }] } } },
+      "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [{ "rawSql": "SELECT COUNT(*) AS total FROM mecha_usines;", "format": "table", "rawQuery": true, "refId": "A" }]
     },
     {
-      "id": 7,
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
-      "type": "piechart",
-      "title": "Distribution des Pannes par Type",
+      "id": 6, "gridPos": { "h": 5, "w": 4, "x": 20, "y": 1 }, "type": "stat",
+      "title": "RUL Moyen",
       "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
-      "options": {
-        "pieType": "donut",
-        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] },
-        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false }
-      },
-      "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" } },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "Overheating" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF5252", "mode": "fixed" } }] },
-          { "matcher": { "id": "byName", "options": "Vibration_Issue" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FFB300", "mode": "fixed" } }] },
-          { "matcher": { "id": "byName", "options": "Tool_Wear_Failure" }, "properties": [{ "id": "color", "value": { "fixedColor": "#00E676", "mode": "fixed" } }] },
-          { "matcher": { "id": "byName", "options": "Pressure_Drop" }, "properties": [{ "id": "color", "value": { "fixedColor": "#00D4FF", "mode": "fixed" } }] },
-          { "matcher": { "id": "byName", "options": "Electrical_Fault" }, "properties": [{ "id": "color", "value": { "fixedColor": "#7B61FF", "mode": "fixed" } }] }
-        ]
-      },
-      "targets": [{ "rawSql": "SELECT failure_type, COUNT(*) as count FROM mecha_data WHERE failure_type != 'Normal' GROUP BY failure_type ORDER BY count DESC;", "format": "table", "rawQuery": true, "refId": "A" }]
+      "fieldConfig": { "defaults": { "unit": "min", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#FF5252", "value": null }, { "color": "#FFB300", "value": 100 }, { "color": "#00E676", "value": 200 }] } } },
+      "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "targets": [{ "rawSql": "SELECT ROUND(AVG(predicted_remaining_life)::numeric, 0) AS rul FROM mecha_data WHERE machine_status = 1;", "format": "table", "rawQuery": true, "refId": "A" }]
     },
+    { "id": 101, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 }, "type": "row", "title": "Comparaison Inter-Sites" },
     {
-      "id": 8,
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
-      "type": "table",
-      "title": "Machines Critiques (RUL < 50 min)",
-      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
-      "fieldConfig": {
-        "defaults": {
-          "custom": { "align": "center", "cellOptions": { "type": "auto" }, "filterable": true }
-        },
-        "overrides": [
-          { "matcher": { "id": "byName", "options": "temperature" }, "properties": [{ "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 85 }, { "color": "#FF5252", "value": 100 }] } }] },
-          { "matcher": { "id": "byName", "options": "downtime_risk" }, "properties": [{ "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 0.5 }, { "color": "#FF5252", "value": 0.7 }] } }] }
-        ]
-      },
-      "options": { "showHeader": true, "cellHeight": "sm", "sortBy": [{ "desc": false, "displayName": "rul" }] },
-      "targets": [{ "rawSql": "SELECT machine_id, usine_id, ROUND(temperature::numeric, 1) as temperature, ROUND(vibration::numeric, 1) as vibration, predicted_remaining_life as rul, ROUND(downtime_risk::numeric, 3) as downtime_risk FROM v_machine_status WHERE predicted_remaining_life < 50 ORDER BY predicted_remaining_life ASC LIMIT 20;", "format": "table", "rawQuery": true, "refId": "A" }]
-    },
-    {
-      "id": 9,
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
-      "type": "table",
-      "title": "Maintenance par Usine - Vue Detaillee",
+      "id": 7, "gridPos": { "h": 10, "w": 24, "x": 0, "y": 7 }, "type": "table",
+      "title": "Benchmark des 5 Usines",
       "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
       "fieldConfig": {
         "defaults": { "custom": { "align": "center", "cellOptions": { "type": "auto" }, "filterable": true } },
         "overrides": [
           { "matcher": { "id": "byName", "options": "maint_pct" }, "properties": [{ "id": "displayName", "value": "Maintenance (%)" }, { "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 5 }, { "color": "#FF5252", "value": 15 }] } }] },
-          { "matcher": { "id": "byName", "options": "anomaly_pct" }, "properties": [{ "id": "displayName", "value": "Anomalies (%)" }, { "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 5 }, { "color": "#FF5252", "value": 10 }] } }] }
+          { "matcher": { "id": "byName", "options": "anomaly_pct" }, "properties": [{ "id": "displayName", "value": "Anomalies (%)" }, { "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 5 }, { "color": "#FF5252", "value": 10 }] } }] },
+          { "matcher": { "id": "byName", "options": "temp_moy" }, "properties": [{ "id": "displayName", "value": "Temp (C)" }, { "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 80 }, { "color": "#FF5252", "value": 100 }] } }] },
+          { "matcher": { "id": "byName", "options": "risque_moy" }, "properties": [{ "id": "displayName", "value": "Risque Moyen" }, { "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 0.3 }, { "color": "#FF5252", "value": 0.5 }] } }] }
         ]
       },
       "options": { "showHeader": true, "cellHeight": "md", "sortBy": [{ "desc": true, "displayName": "Maintenance (%)" }] },
-      "targets": [{ "rawSql": "SELECT u.nom as usine, u.pays, u.nb_machines, ROUND(AVG(d.temperature)::numeric, 1) as temp_moy, ROUND(AVG(d.vibration)::numeric, 1) as vibr_moy, ROUND(AVG(d.maintenance_required)::numeric * 100, 1) as maint_pct, ROUND(AVG(d.anomaly_flag)::numeric * 100, 1) as anomaly_pct, MIN(d.predicted_remaining_life)::int as rul_min, ROUND(AVG(d.downtime_risk)::numeric, 3) as risque_moy, COUNT(*) as nb_mesures FROM mecha_data d JOIN mecha_usines u ON d.usine_id = u.usine_id GROUP BY u.nom, u.pays, u.nb_machines ORDER BY maint_pct DESC;", "format": "table", "rawQuery": true, "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT u.nom AS usine, u.pays, u.nb_machines, ROUND(AVG(d.temperature)::numeric, 1) AS temp_moy, ROUND(AVG(d.vibration)::numeric, 1) AS vibr_moy, ROUND(AVG(d.maintenance_required)::numeric * 100, 1) AS maint_pct, ROUND(AVG(d.anomaly_flag)::numeric * 100, 1) AS anomaly_pct, MIN(d.predicted_remaining_life)::int AS rul_min, ROUND(AVG(d.downtime_risk)::numeric, 3) AS risque_moy, COUNT(*) AS nb_mesures FROM mecha_data d JOIN mecha_usines u ON d.usine_id = u.usine_id GROUP BY u.nom, u.pays, u.nb_machines ORDER BY maint_pct DESC;", "format": "table", "rawQuery": true, "refId": "A" }]
+    },
+    { "id": 102, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 17 }, "type": "row", "title": "Repartition des Pannes" },
+    {
+      "id": 8, "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 }, "type": "piechart",
+      "title": "Types de Pannes - Groupe",
+      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
+      "options": { "pieType": "donut", "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false } },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } } },
+      "targets": [{ "rawSql": "SELECT failure_type, COUNT(*) AS nb FROM mecha_data WHERE failure_type != 'Normal' GROUP BY failure_type ORDER BY nb DESC;", "format": "table", "rawQuery": true, "refId": "A" }]
+    },
+    {
+      "id": 9, "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 }, "type": "barchart",
+      "title": "Maintenance par Usine",
+      "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": { "custom": { "fillOpacity": 80, "gradientMode": "scheme" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "maintenance_pct" }, "properties": [{ "id": "displayName", "value": "Maintenance (%)" }, { "id": "color", "value": { "fixedColor": "#FF5252", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "anomaly_pct" }, "properties": [{ "id": "displayName", "value": "Anomalies (%)" }, { "id": "color", "value": { "fixedColor": "#FFB300", "mode": "fixed" } }] }
+        ]
+      },
+      "targets": [{ "rawSql": "SELECT u.nom AS usine, ROUND(AVG(d.maintenance_required)::numeric * 100, 1) AS maintenance_pct, ROUND(AVG(d.anomaly_flag)::numeric * 100, 1) AS anomaly_pct FROM mecha_data d JOIN mecha_usines u ON d.usine_id = u.usine_id GROUP BY u.nom ORDER BY u.nom;", "format": "table", "rawQuery": true, "refId": "A" }]
     }
   ],
   "schemaVersion": 39,
-  "tags": ["mecha", "maintenance-predictive", "industrie-4.0"],
+  "tags": ["mecha", "direction-generale", "groupe"],
   "templating": { "list": [] },
-  "time": { "from": "now-7d", "to": "now" },
-  "title": "MECHA - Maintenance Predictive Industrielle",
-  "uid": "mecha-main-dashboard"
+  "time": { "from": "now-30d", "to": "now" },
+  "title": "MECHA Groupe - Direction Generale",
+  "uid": "mecha-dg-groupe"
 }
