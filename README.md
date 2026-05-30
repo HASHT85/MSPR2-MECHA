@@ -29,10 +29,6 @@
 
 ## 🏗️ Architecture
 
-<p align="center">
-  <img src="docs/images/architecture.png" alt="Architecture MECHA" width="800">
-</p>
-
 | Service | Technologie | Port | Description |
 |---------|------------|------|-------------|
 | **API** | FastAPI | `8000` | API REST de prédiction ML (9 endpoints) |
@@ -51,12 +47,27 @@
 
 ### API FastAPI — Documentation Swagger
 <p align="center">
-  <img src="docs/images/api_swagger.png" alt="API Swagger" width="800">
+  <img src="docs/images/api_docs.png" alt="API Swagger" width="800">
 </p>
 
-### Grafana — Dashboard Direction Générale
+### API — Health Check
 <p align="center">
-  <img src="docs/images/grafana_dashboard.png" alt="Grafana Dashboard" width="800">
+  <img src="docs/images/api_health.png" alt="API Health" width="800">
+</p>
+
+### Grafana — Direction Générale (DG Groupe)
+<p align="center">
+  <img src="docs/images/grafana_dg.png" alt="Grafana DG Groupe" width="800">
+</p>
+
+### Grafana — Directeur d'Usine
+<p align="center">
+  <img src="docs/images/grafana_usine.png" alt="Grafana Directeur Usine" width="800">
+</p>
+
+### Grafana — Technicien Maintenance
+<p align="center">
+  <img src="docs/images/grafana_technicien.png" alt="Grafana Technicien" width="800">
 </p>
 
 ---
