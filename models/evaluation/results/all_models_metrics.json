@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "project": "MECHA - Maintenance Predictive",
+    "date": "2026-05-30T17:44:40.905328",
+    "dataset": "mecha_dataset_processed.csv",
+    "n_total_samples": 110000,
+    "n_train_samples": 88000,
+    "n_test_samples": 22000,
+    "split_method": "temporal_80_20",
+    "features_used": [
+      "temperature",
+      "vibration",
+      "humidity",
+      "pressure",
+      "energy_consumption",
+      "predicted_remaining_life",
+      "temp_rolling_10min",
+      "temp_trend_1h",
+      "vibr_rolling_10min",
+      "temp_std_30min",
+      "energy_vibr_ratio",
+      "downtime_risk"
+    ],
+    "target_variable": "maintenance_required",
+    "data_leakage_exclusions": [
+      "machine_status"
+    ],
+    "imbalance_handling": "class_weight_balanced / scale_pos_weight"
+  },
+  "models": {
+    "random_forest": {
+      "model_name": "Random Forest",
+      "accuracy": 0.9840454545454546,
+      "precision": 0.9877408056042032,
+      "recall": 0.6211453744493393,
+      "f1_score": 0.7626774847870182,
+      "auc_roc": 0.8979661213596654,
+      "n_test_samples": 22000,
+      "n_positive_test": 908,
+      "n_negative_test": 21092,
+      "confusion_matrix": {
+        "true_negatives": 21085,
+        "false_positives": 7,
+        "false_negatives": 344,
+        "true_positives": 564
+      }
+    },
+    "logistic_regression": {
+      "model_name": "Logistic Regression",
+      "accuracy": 0.9045,
+      "precision": 0.2732801216267579,
+      "recall": 0.7918502202643172,
+      "f1_score": 0.4063294716021475,
+      "auc_roc": 0.867879422308477,
+      "n_test_samples": 22000,
+      "n_positive_test": 908,
+      "n_negative_test": 21092,
+      "confusion_matrix": {
+        "true_negatives": 19180,
+        "false_positives": 1912,
+        "false_negatives": 189,
+        "true_positives": 719
+      }
+    },
+    "isolation_forest": {
+      "model_name": "Isolation Forest",
+      "accuracy": 0.7473181818181818,
+      "precision": 0.0945074106364429,
+      "recall": 0.5969162995594713,
+      "f1_score": 0.1631792864669577,
+      "auc_roc": 0.7740660592445432,
+      "n_anomalies_detected": 5735,
+      "contamination_effective": 0.2606818181818182,
+      "n_test_samples": 22000,
+      "confusion_matrix": {
+        "true_negatives": 15899,
+        "false_positives": 5193,
+        "false_negatives": 366,
+        "true_positives": 542
+      }
+    },
+    "rf_regressor_rul": {
+      "model_name": "RF Regressor RUL",
+      "mae": 39.254895337802296,
+      "rmse": 69.28085983780286,
+      "r2_score": 0.5980291228935453,
+      "mse": 4799.837539865286,
+      "n_test_samples": 22000,
+      "y_test_mean": 309.1904090909091,
+      "y_test_std": 109.27626555048674,
+      "y_pred_mean": 344.5968625855037,
+      "y_pred_std": 72.71477786251386
+    },
+    "xgboost": {
+      "model_name": "XGBoost",
+      "accuracy": 0.9837727272727272,
+      "precision": 0.9791304347826087,
+      "recall": 0.6200440528634361,
+      "f1_score": 0.7592717464598786,
+      "auc_roc": 0.9046796298740738,
+      "n_test_samples": 22000,
+      "n_positive_test": 908,
+      "n_negative_test": 21092,
+      "confusion_matrix": {
+        "true_negatives": 21080,
+        "false_positives": 12,
+        "false_negatives": 345,
+        "true_positives": 563
+      }
+    }
+  }
+}

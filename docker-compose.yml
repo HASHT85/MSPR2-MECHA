@@ -1,0 +1,148 @@
+# ==============================================================================
+# MSPR 2 MECHA — Docker Compose (v2)
+# ==============================================================================
+# Usage :
+#   cp .env.example .env   # Adapter les valeurs
+#   docker compose up --build
+# ==============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # PostgreSQL — Base de données
+  # --------------------------------------------------------------------------
+  db:
+    image: postgres:15-alpine
+    container_name: mecha-db
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mecha_db}
+      POSTGRES_USER: ${POSTGRES_USER:-mecha_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mecha_user} -d ${POSTGRES_DB:-mecha_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - mecha-network
+
+  # --------------------------------------------------------------------------
+  # FastAPI — API REST (prédictions, modèles IA)
+  # --------------------------------------------------------------------------
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: mecha-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      API_HOST: ${API_HOST:-0.0.0.0}
+      API_PORT: 8000
+      API_RELOAD: ${API_RELOAD:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-mecha_db}
+      POSTGRES_USER: ${POSTGRES_USER:-mecha_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+      MODEL_PATH: /app/models/saved_models
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-random_forest}
+      PREDICTION_THRESHOLD: ${PREDICTION_THRESHOLD:-0.3}
+      ALERT_TEMP_CRITICAL: ${ALERT_TEMP_CRITICAL:-100}
+      ALERT_REBUTS_MAX: ${ALERT_REBUTS_MAX:-3.0}
+      ALERT_TRS_MIN: ${ALERT_TRS_MIN:-75}
+      ALERT_CYCLE_DEVIATION: ${ALERT_CYCLE_DEVIATION:-15}
+      ALERT_ANOMALY_MAX: ${ALERT_ANOMALY_MAX:-10}
+    volumes:
+      - ./models:/app/models:ro
+      - ./data:/app/data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mecha-network
+
+  # --------------------------------------------------------------------------
+  # Streamlit — Dashboard métier
+  # --------------------------------------------------------------------------
+  dashboard:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: mecha-dashboard
+    restart: unless-stopped
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+    environment:
+      API_URL: http://api:8000
+      STREAMLIT_THEME: ${STREAMLIT_THEME:-dark}
+      STREAMLIT_SERVER_PORT: 8501
+      STREAMLIT_SERVER_ADDRESS: 0.0.0.0
+      STREAMLIT_SERVER_HEADLESS: "true"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - mecha-network
+
+  # --------------------------------------------------------------------------
+  # Grafana — Monitoring & métriques
+  # --------------------------------------------------------------------------
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: mecha-grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-changeme}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - mecha-network
+
+# ==============================================================================
+# Volumes persistants
+# ==============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# ==============================================================================
+# Réseau partagé
+# ==============================================================================
+networks:
+  mecha-network:
+    driver: bridge

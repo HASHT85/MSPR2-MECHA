@@ -1,0 +1,145 @@
+# ==============================================================================
+# MSPR 2 MECHA — CI/CD Pipeline (GitHub Actions)
+# ==============================================================================
+
+name: MECHA CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Job 1 : Lint — Analyse statique du code avec Ruff
+  # --------------------------------------------------------------------------
+  lint:
+    name: 🔍 Lint (Ruff)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Installer Ruff
+        run: pip install ruff
+
+      - name: Lancer Ruff (check)
+        run: ruff check . --output-format=github
+
+      - name: Lancer Ruff (format check)
+        run: ruff format --check .
+
+  # --------------------------------------------------------------------------
+  # Job 2 : Tests — Tests unitaires & couverture avec pytest
+  # --------------------------------------------------------------------------
+  test:
+    name: 🧪 Tests (pytest)
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: mecha_db_test
+          POSTGRES_USER: mecha_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mecha_user -d mecha_db_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: mecha_db_test
+      POSTGRES_USER: mecha_user
+      POSTGRES_PASSWORD: test_password
+      MODEL_PATH: models/saved_models
+      DEFAULT_MODEL: random_forest
+      PREDICTION_THRESHOLD: "0.3"
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Installer les dépendances
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lancer les tests avec couverture
+        run: |
+          pytest \
+            --cov=api \
+            --cov=models \
+            --cov-report=xml:coverage.xml \
+            --cov-report=html:htmlcov \
+            --cov-report=term-missing \
+            -v
+
+      - name: Upload rapport de couverture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
+          retention-days: 14
+
+  # --------------------------------------------------------------------------
+  # Job 3 : Build — Construction des images Docker
+  # --------------------------------------------------------------------------
+  build:
+    name: 🐳 Build Docker
+    runs-on: ubuntu-latest
+    needs: test
+
+    strategy:
+      matrix:
+        service:
+          - name: api
+            context: ./api
+          - name: dashboard
+            context: ./app
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image ${{ matrix.service.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service.context }}
+          push: false
+          load: true
+          tags: mecha-${{ matrix.service.name }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Vérifier l'image ${{ matrix.service.name }}
+        run: docker image inspect mecha-${{ matrix.service.name }}:${{ github.sha }}

@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+eggs/
+*.egg
+.eggs/
+
+# Virtual environment
+venv/
+env/
+.env
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ML Models (large binary files)
+models/saved_models/*.joblib
+models/saved_models/*.pkl
+models/saved_models/*.h5
+!models/saved_models/.gitkeep
+
+# Data (generated - too large for git)
+data/raw/*.csv
+data/processed/*.csv
+data/external/*.zip
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/external/.gitkeep
+
+# Docker
+docker-compose.override.yml
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# pytest
+.pytest_cache/
+
+# Logs
+*.log
+logs/
+
+# Temporary
+*.tmp
+*.bak
+

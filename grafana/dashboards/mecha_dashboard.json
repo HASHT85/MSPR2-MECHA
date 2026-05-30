@@ -1,0 +1,197 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "type": "stat",
+      "title": "Machines Actives",
+      "datasource": "PostgreSQL",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 30 },
+              { "color": "green", "value": 40 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(DISTINCT machine_id) as active_machines FROM mecha_data WHERE machine_status = 1 AND timestamp > NOW() - INTERVAL '1 hour'",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "type": "stat",
+      "title": "Alertes Critiques",
+      "datasource": "PostgreSQL",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT COUNT(*) as critical_alerts FROM mecha_data WHERE (temperature > 100 OR predicted_remaining_life < 50) AND timestamp > NOW() - INTERVAL '1 hour'",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "type": "stat",
+      "title": "Taux Maintenance",
+      "datasource": "PostgreSQL",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "red", "value": 15 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT (SUM(CASE WHEN maintenance_required = 1 THEN 1 ELSE 0 END)::float / COUNT(*) * 100) as maintenance_rate FROM mecha_data WHERE timestamp > NOW() - INTERVAL '1 hour'",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "type": "stat",
+      "title": "RUL Moyen (min)",
+      "datasource": "PostgreSQL",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "green", "value": 200 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT AVG(predicted_remaining_life) as avg_rul FROM mecha_data WHERE machine_status = 1 AND timestamp > NOW() - INTERVAL '1 hour'",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "type": "timeseries",
+      "title": "Temperature par Usine (Moyenne)",
+      "datasource": "PostgreSQL",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "celsius"
+        }
+      },
+      "options": {
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT timestamp as time, usine_id, AVG(temperature) as temperature FROM mecha_data WHERE $__timeFilter(timestamp) GROUP BY timestamp, usine_id ORDER BY timestamp",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "type": "timeseries",
+      "title": "Vibration par Usine (Moyenne)",
+      "datasource": "PostgreSQL",
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "none"
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT timestamp as time, usine_id, AVG(vibration) as vibration FROM mecha_data WHERE $__timeFilter(timestamp) GROUP BY timestamp, usine_id ORDER BY timestamp",
+          "format": "time_series"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "type": "barchart",
+      "title": "Distribution des Pannes par Type",
+      "datasource": "PostgreSQL",
+      "targets": [
+        {
+          "rawSql": "SELECT failure_type, COUNT(*) as count FROM mecha_data WHERE failure_type != 'Normal' AND timestamp > NOW() - INTERVAL '24 hours' GROUP BY failure_type ORDER BY count DESC",
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "type": "table",
+      "title": "Machines Critiques (RUL < 50 min)",
+      "datasource": "PostgreSQL",
+      "targets": [
+        {
+          "rawSql": "SELECT machine_id, usine_id, temperature, vibration, predicted_remaining_life as rul, downtime_risk FROM mecha_data WHERE predicted_remaining_life < 50 AND machine_status = 1 ORDER BY predicted_remaining_life ASC LIMIT 20",
+          "format": "table"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["mecha", "maintenance-predictive", "industrie-4.0"],
+  "templating": {
+    "list": [
+      {
+        "name": "usine",
+        "type": "query",
+        "datasource": "PostgreSQL",
+        "query": "SELECT DISTINCT usine_id FROM mecha_data ORDER BY usine_id",
+        "multi": true,
+        "includeAll": true
+      }
+    ]
+  },
+  "time": { "from": "now-24h", "to": "now" },
+  "title": "MECHA - Maintenance Predictive Industrielle",
+  "uid": "mecha-main-dashboard"
+}
