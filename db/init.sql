@@ -83,7 +83,7 @@ CREATE INDEX IF NOT EXISTS idx_predictions_model ON mecha_predictions(model_used
 
 -- Vue pour le dashboard Grafana
 CREATE OR REPLACE VIEW v_machine_status AS
-SELECT
+SELECT DISTINCT ON (m.machine_id)
     m.machine_id,
     m.usine_id,
     m.usine_nom,
@@ -92,13 +92,14 @@ SELECT
     m.vibration,
     m.predicted_remaining_life,
     m.maintenance_required,
+    m.machine_status,
+    m.anomaly_flag,
+    m.failure_type,
     m.downtime_risk,
     m.data_source,
     m.timestamp
 FROM mecha_data m
-WHERE m.timestamp = (
-    SELECT MAX(timestamp) FROM mecha_data WHERE machine_id = m.machine_id
-);
+ORDER BY m.machine_id, m.timestamp DESC;
 
 -- Donnees de reference : usines
 CREATE TABLE IF NOT EXISTS mecha_usines (
