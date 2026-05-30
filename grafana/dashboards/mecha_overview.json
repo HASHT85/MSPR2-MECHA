@@ -23,7 +23,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 100,
-      "title": "ðŸ­ KPIs Globaux â€” Groupe MECHA",
+      "title": "KPIs Globaux - Groupe MECHA",
       "type": "row"
     },
     {
@@ -251,7 +251,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "id": 101,
-      "title": "ðŸ“Š Performance par Usine",
+      "title": "Performance par Usine",
       "type": "row"
     },
     {
@@ -358,7 +358,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
       "id": 102,
-      "title": "ðŸŒ¡ï¸ Monitoring Capteurs",
+      "title": "Monitoring Capteurs",
       "type": "row"
     },
     {
@@ -493,7 +493,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
       "id": 103,
-      "title": "ðŸ“‹ Detail par Usine",
+      "title": "Detail par Usine",
       "type": "row"
     },
     {
@@ -519,7 +519,7 @@
           {
             "matcher": { "id": "byName", "options": "temp_moy" },
             "properties": [
-              { "id": "displayName", "value": "Temp Moy (Â°C)" },
+              { "id": "displayName", "value": "Temp Moy (C)" },
               { "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } },
               { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 85 }, { "color": "#FF5252", "value": 100 }] } }
             ]
@@ -567,7 +567,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 },
       "id": 104,
-      "title": "ðŸ”§ Machines Critiques",
+      "title": "Machines Critiques",
       "type": "row"
     },
     {
