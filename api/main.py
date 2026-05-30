@@ -804,13 +804,17 @@ async def predict_rul(data: RULInput) -> RULResponse:
         model_name = "fallback_heuristic"
 
         if models.rul_regressor is not None:
-            rul_value = float(models.rul_regressor.predict(features)[0])
+            # Le RUL regressor est entraine SANS predicted_remaining_life
+            # (ce serait circulaire de l'inclure comme feature)
+            rul_feature_idx = ML_FEATURE_NAMES.index("predicted_remaining_life")
+            rul_features = np.delete(features, rul_feature_idx, axis=1)
+            rul_value = float(models.rul_regressor.predict(rul_features)[0])
             rul_value = max(rul_value, 0.0)
             model_name = "rf_regressor_rul"
             # Estimation de confiance basee sur la plage de prediction des arbres
             if hasattr(models.rul_regressor, "estimators_"):
                 tree_preds = [
-                    est.predict(features)[0]
+                    est.predict(rul_features)[0]
                     for est in models.rul_regressor.estimators_
                 ]
                 std = float(np.std(tree_preds))
