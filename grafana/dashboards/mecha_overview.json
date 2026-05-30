@@ -1,4 +1,4 @@
-{
+﻿{
   "annotations": {
     "list": [
       {
@@ -23,7 +23,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 100,
-      "title": "🏭 KPIs Globaux — Groupe MECHA",
+      "title": "ðŸ­ KPIs Globaux â€” Groupe MECHA",
       "type": "row"
     },
     {
@@ -63,7 +63,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(COUNT(CASE WHEN machine_status = 1 THEN 1 END)::numeric / NULLIF(COUNT(DISTINCT machine_id), 0) * 100, 1) AS trs FROM mecha_data WHERE timestamp = (SELECT MAX(timestamp) FROM mecha_data);",
+          "rawSql": "SELECT ROUND(COUNT(CASE WHEN machine_status = 1 THEN 1 END)::numeric / NULLIF(COUNT(DISTINCT machine_id), 0)::numeric * 100, 1) AS trs FROM mecha_data WHERE timestamp = (SELECT MAX(timestamp) FROM mecha_data);",
           "refId": "A"
         }
       ]
@@ -100,7 +100,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(AVG(maintenance_required) * 100, 1) AS taux FROM mecha_data;",
+          "rawSql": "SELECT ROUND(AVG(maintenance_required)::numeric * 100, 1) AS taux FROM mecha_data;",
           "refId": "A"
         }
       ]
@@ -137,7 +137,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(AVG(anomaly_flag) * 100, 1) AS taux FROM mecha_data;",
+          "rawSql": "SELECT ROUND(AVG(anomaly_flag)::numeric * 100, 1) AS taux FROM mecha_data;",
           "refId": "A"
         }
       ]
@@ -251,7 +251,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "id": 101,
-      "title": "📊 Performance par Usine",
+      "title": "ðŸ“Š Performance par Usine",
       "type": "row"
     },
     {
@@ -303,7 +303,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT u.nom AS usine, ROUND(AVG(d.maintenance_required) * 100, 1) AS maintenance_pct, ROUND(AVG(d.anomaly_flag) * 100, 1) AS anomaly_pct FROM mecha_data d JOIN mecha_usines u ON d.usine_id = u.usine_id GROUP BY u.nom ORDER BY u.nom;",
+          "rawSql": "SELECT u.nom AS usine, ROUND(AVG(d.maintenance_required)::numeric * 100, 1) AS maintenance_pct, ROUND(AVG(d.anomaly_flag)::numeric * 100, 1) AS anomaly_pct FROM mecha_data d JOIN mecha_usines u ON d.usine_id = u.usine_id GROUP BY u.nom ORDER BY u.nom;",
           "refId": "A"
         }
       ],
@@ -358,7 +358,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
       "id": 102,
-      "title": "🌡️ Monitoring Capteurs",
+      "title": "ðŸŒ¡ï¸ Monitoring Capteurs",
       "type": "row"
     },
     {
@@ -493,7 +493,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 21 },
       "id": 103,
-      "title": "📋 Detail par Usine",
+      "title": "ðŸ“‹ Detail par Usine",
       "type": "row"
     },
     {
@@ -519,7 +519,7 @@
           {
             "matcher": { "id": "byName", "options": "temp_moy" },
             "properties": [
-              { "id": "displayName", "value": "Temp Moy (°C)" },
+              { "id": "displayName", "value": "Temp Moy (Â°C)" },
               { "id": "custom.cellOptions", "value": { "mode": "gradient", "type": "color-background" } },
               { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 85 }, { "color": "#FF5252", "value": 100 }] } }
             ]
@@ -558,7 +558,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT u.nom AS usine, u.pays, u.nb_machines, ROUND(AVG(d.temperature)::numeric, 1) AS temp_moy, ROUND(AVG(d.vibration)::numeric, 1) AS vibr_moy, ROUND(AVG(d.maintenance_required) * 100, 1) AS maint_pct, ROUND(AVG(d.anomaly_flag) * 100, 1) AS anomaly_pct, MIN(d.predicted_remaining_life) AS rul_min, ROUND(AVG(d.downtime_risk)::numeric, 2) AS risque_moy, COUNT(*) AS nb_mesures FROM mecha_data d JOIN mecha_usines u ON d.usine_id = u.usine_id GROUP BY u.nom, u.pays, u.nb_machines ORDER BY maint_pct DESC;",
+          "rawSql": "SELECT u.nom AS usine, u.pays, u.nb_machines, ROUND(AVG(d.temperature)::numeric, 1) AS temp_moy, ROUND(AVG(d.vibration)::numeric, 1) AS vibr_moy, ROUND(AVG(d.maintenance_required)::numeric * 100, 1) AS maint_pct, ROUND(AVG(d.anomaly_flag)::numeric * 100, 1) AS anomaly_pct, MIN(d.predicted_remaining_life) AS rul_min, ROUND(AVG(d.downtime_risk)::numeric, 2) AS risque_moy, COUNT(*) AS nb_mesures FROM mecha_data d JOIN mecha_usines u ON d.usine_id = u.usine_id GROUP BY u.nom, u.pays, u.nb_machines ORDER BY maint_pct DESC;",
           "refId": "A"
         }
       ]
@@ -567,7 +567,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 },
       "id": 104,
-      "title": "🔧 Machines Critiques",
+      "title": "ðŸ”§ Machines Critiques",
       "type": "row"
     },
     {
@@ -629,3 +629,4 @@
   "uid": "mecha-overview",
   "version": 1
 }
+
