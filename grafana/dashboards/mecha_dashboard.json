@@ -9,7 +9,7 @@
       "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
       "fieldConfig": { "defaults": { "unit": "percent", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#FF5252", "value": null }, { "color": "#FFB300", "value": 50 }, { "color": "#00E676", "value": 80 }] } } },
       "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
-      "targets": [{ "rawSql": "SELECT ROUND(COUNT(CASE WHEN machine_status = 1 THEN 1 END)::numeric / NULLIF(COUNT(DISTINCT machine_id), 0)::numeric * 100, 1) AS trs FROM v_machine_status;", "format": "table", "rawQuery": true, "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT ROUND((1 - AVG(maintenance_required)::numeric) * 100, 1) AS trs FROM mecha_data;", "format": "table", "rawQuery": true, "refId": "A" }]
     },
     {
       "id": 2, "gridPos": { "h": 5, "w": 4, "x": 4, "y": 1 }, "type": "stat",
@@ -33,7 +33,7 @@
       "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#00D4FF", "value": null }] } } },
       "options": { "colorMode": "background_solid", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
-      "targets": [{ "rawSql": "SELECT COUNT(DISTINCT machine_id) || ' / ' || (SELECT SUM(nb_machines) FROM mecha_usines) AS total FROM mecha_data;", "format": "table", "rawQuery": true, "refId": "A" }]
+      "targets": [{ "rawSql": "SELECT COUNT(DISTINCT machine_id) AS total FROM mecha_data;", "format": "table", "rawQuery": true, "refId": "A" }]
     },
     {
       "id": 5, "gridPos": { "h": 5, "w": 4, "x": 16, "y": 1 }, "type": "stat",
