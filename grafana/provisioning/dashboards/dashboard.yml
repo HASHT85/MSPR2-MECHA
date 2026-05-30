@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: MECHA Dashboards
+    orgId: 1
+    folder: MECHA
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
