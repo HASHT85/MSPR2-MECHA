@@ -197,14 +197,29 @@ FastAPI est le choix idéal car :
 | Coût | Gratuit | Gratuit | Gratuit (OSS) | Payant | Gratuit (OSS) |
 | Déploiement Docker | ✅ Simple | ✅ | ✅ | ❌ Cloud | ✅ |
 
-### 6.2 Stratégie à deux dashboards
+### 6.2 Stratégie à deux dashboards — Évolution MSPR 2
+
+> **Contexte** : En MSPR 1, **Grafana** a été retenu comme unique outil de restitution (Dashboard Groupe + Dashboard Site + Alertes). En MSPR 2, nous ajoutons **Streamlit** comme couche d'analyse complémentaire, répondant à des besoins que Grafana ne couvre pas nativement.
 
 | Outil | Public cible | Usage | Justification |
-|-------|-------------|-------|--------------|
-| **Streamlit** | Équipe data, direction, responsables maintenance | Exploration données, analyse prédictions, gestion alertes, reporting | Prototypage Python ultra-rapide, interactivité, intégration native avec les modèles ML |
-| **Grafana** | Opérateurs, techniciens maintenance | Monitoring temps réel des capteurs, alertes visuelles | Standard industriel du monitoring, rafraîchissement temps réel, alerting natif (email/Slack) |
+|-------|-------------|-------|--------------| 
+| **Streamlit** | Équipe data, direction, responsables maintenance | Exploration données, analyse prédictions IA, comparaison de modèles, reporting interactif | **Ajout MSPR 2** — Prototypage Python ultra-rapide, intégration native avec les modèles ML |
+| **Grafana** | DG Groupe, directeurs d'usine, techniciens maintenance | Monitoring temps réel des capteurs, KPIs opérationnels, alertes visuelles | **Retenu en MSPR 1** — Standard industriel du monitoring, alerting natif (email/Slack) |
 
-**Pourquoi deux outils ?** Les besoins des utilisateurs sont fondamentalement différents. L'équipe data et la direction ont besoin d'**exploration et d'analyse** (Streamlit excelle). Les opérateurs terrain ont besoin de **monitoring temps réel avec alertes** (Grafana excelle). Un seul outil ne couvre pas les deux besoins de manière optimale.
+#### Pourquoi ajouter Streamlit en complément de Grafana ?
+
+| Besoin | Grafana | Streamlit |
+|--------|:-------:|:---------:|
+| Monitoring temps réel des capteurs | ✅ Excellent | ⚠️ Limité (pas de refresh auto) |
+| Alertes opérationnelles (email/Slack) | ✅ Natif | ❌ Non supporté |
+| Exploration interactive des données | ⚠️ Limité (SQL figé) | ✅ Filtres dynamiques Python |
+| Visualisation des prédictions ML | ❌ Pas d'intégration ML | ✅ Chargement natif des modèles scikit-learn |
+| Comparaison de modèles (F1, AUC-ROC) | ❌ | ✅ Courbes ROC, matrice de confusion |
+| Feature importance et explicabilité IA | ❌ | ✅ Graphiques interactifs |
+| Vue consolidée multi-sites avec drill-down | ⚠️ Limité (variables) | ✅ Navigation Groupe → Site → Machine |
+| Prototypage rapide en Python | ❌ (JSON/YAML config) | ✅ 100% Python, itération rapide |
+
+**En résumé** : Grafana excelle pour le **monitoring opérationnel en temps réel** (ce pour quoi il a été retenu en MSPR 1). Streamlit apporte la couche d'**analyse IA et d'exploration de données** que Grafana ne couvre pas — c'est la valeur ajoutée de la MSPR 2. Un seul outil ne couvre pas les deux besoins de manière optimale.
 
 ---
 
