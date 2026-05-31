@@ -156,39 +156,7 @@ L'entretien a permis d'identifier 10 besoins fonctionnels, priorises selon la me
 
 L'architecture retenue est une architecture en couches, distribuee et tolerante aux pannes, concue pour un environnement industriel :
 
-```mermaid
-graph LR
-    subgraph "Couche 1 - Acquisition"
-        IOT["Capteurs IoT<br>50 machines x 5 capteurs"]
-    end
-    subgraph "Couche 2 - Ingestion"
-        MQTT["Broker MQTT<br>Mosquitto"]
-        ELT["Scripts Python<br>ELT"]
-    end
-    subgraph "Couche 3 - Stockage"
-        PG["PostgreSQL 16<br>110k enregistrements"]
-    end
-    subgraph "Couche 4 - Intelligence"
-        ML["Pipeline ML<br>scikit-learn + XGBoost"]
-    end
-    subgraph "Couche 5 - Service"
-        API["API REST<br>FastAPI - 9 endpoints"]
-    end
-    subgraph "Couche 6 - Presentation"
-        ST["Streamlit<br>5 vues metier"]
-        GR["Grafana<br>3 dashboards"]
-    end
-    subgraph "Couche 7 - Transverse"
-        DOCK["Docker Compose<br>4 services"]
-        CI["GitHub Actions<br>CI/CD"]
-    end
-    IOT --> MQTT --> ELT --> PG
-    PG --> ML --> API
-    API --> ST
-    PG --> GR
-    DOCK -.-> API & ST & GR & PG
-    CI -.-> DOCK
-```
+![Architecture en 7 couches MECHA Predict](docs/images/diag_architecture.png)
 
 ### 3.2 Justification des choix techniques
 
@@ -235,58 +203,7 @@ En MSPR 1, Grafana a ete retenu comme unique outil de restitution. En MSPR 2, St
 
 La base PostgreSQL comprend 4 tables et 1 vue materialisee :
 
-```mermaid
-erDiagram
-    mecha_usines ||--o{ mecha_data : "contient"
-    mecha_data ||--o{ mecha_predictions : "genere"
-    mecha_data ||--o{ mecha_alerts : "declenche"
-
-    mecha_usines {
-        varchar usine_id PK
-        varchar nom
-        varchar ville
-        varchar pays
-        int nb_machines
-        date date_ouverture
-    }
-
-    mecha_data {
-        serial id PK
-        timestamp timestamp
-        int machine_id
-        varchar usine_id FK
-        float temperature
-        float vibration
-        float humidity
-        float pressure
-        float energy_consumption
-        int machine_status
-        int maintenance_required
-        varchar failure_type
-        float predicted_remaining_life
-        float downtime_risk
-        varchar data_source
-    }
-
-    mecha_alerts {
-        serial id PK
-        timestamp timestamp
-        int machine_id
-        varchar alert_type
-        varchar severity
-        boolean resolved
-    }
-
-    mecha_predictions {
-        serial id PK
-        timestamp timestamp
-        int machine_id
-        varchar model_used
-        float prediction
-        float confidence
-        float rul_hours
-    }
-```
+![Schema de la base de donnees MECHA](docs/images/diag_database.png)
 
 9 index ont ete crees pour optimiser les requetes frequentes (par machine, par usine, par timestamp, par statut de maintenance).
 
@@ -686,13 +603,7 @@ Filtrable par usine (variable Grafana). 4 KPIs du site (Machines Actives 21, Tau
 
 La pipeline CI/CD est implementee dans `.github/workflows/ci.yml` (146 lignes) et s'execute a chaque push ou Pull Request sur la branche main :
 
-```mermaid
-graph LR
-    A["Push / PR<br>sur main"] --> B["Job 1 : Lint<br>Ruff check + format"]
-    B --> C["Job 2 : Tests<br>pytest + couverture"]
-    C --> D["Job 3 : Build<br>Docker build"]
-    D --> E["Artefacts<br>Rapport couverture"]
-```
+![Pipeline CI/CD GitHub Actions](docs/images/diag_cicd.png)
 
 ### 9.2 Detail des 3 jobs
 
@@ -900,35 +811,7 @@ Le systeme MECHA Predict est classe en **risque limite** selon le reglement euro
 
 L'architecture retenue est centralisee, avec un serveur principal a Lyon (siege) et des passerelles edge par site :
 
-```mermaid
-graph TD
-    subgraph "Serveur Central - Lyon"
-        API["API FastAPI"]
-        DB["PostgreSQL"]
-        GR["Grafana"]
-        ST["Streamlit"]
-    end
-    subgraph "Edge Gateway - Lyon"
-        E1["Capteurs 10 machines"]
-    end
-    subgraph "Edge Gateway - Toulouse"
-        E2["Capteurs 10 machines"]
-    end
-    subgraph "Edge Gateway - Nantes"
-        E3["Capteurs 10 machines"]
-    end
-    subgraph "Edge Gateway - Barcelone"
-        E4["Capteurs 10 machines"]
-    end
-    subgraph "Edge Gateway - Madrid"
-        E5["Capteurs 10 machines"]
-    end
-    E1 -->|VPN| DB
-    E2 -->|VPN| DB
-    E3 -->|VPN| DB
-    E4 -->|VPN| DB
-    E5 -->|VPN| DB
-```
+![Architecture de deploiement centralisee](docs/images/diag_deployment.png)
 
 ### 13.2 Deploiement progressif en 4 phases
 
