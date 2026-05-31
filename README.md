@@ -40,22 +40,46 @@
 
 ## 🖥️ Screenshots
 
-### Dashboard Streamlit — Vue Groupe
+### 📊 Dashboard Streamlit (Ajout MSPR 2 — Analyse IA)
+
+#### Vue Site — Directeur d'Usine
 <p align="center">
-  <img src="docs/images/dashboard_streamlit.png" alt="Dashboard Streamlit" width="800">
+  <img src="docs/images/streamlit_site.png" alt="Streamlit Vue Site" width="800">
 </p>
 
-### Grafana — Direction Générale (DG Groupe)
+#### Vue Machine — Diagnostic Individuel
+<p align="center">
+  <img src="docs/images/streamlit_machine.png" alt="Streamlit Vue Machine" width="800">
+</p>
+
+#### Centre d'Alertes
+<p align="center">
+  <img src="docs/images/streamlit_alertes.png" alt="Streamlit Alertes" width="800">
+</p>
+
+#### Performance du Modèle IA
+<p align="center">
+  <img src="docs/images/streamlit_modele_ia.png" alt="Streamlit Modèle IA" width="800">
+</p>
+
+#### Tendance Température par Machine
+<p align="center">
+  <img src="docs/images/streamlit_temperature.png" alt="Streamlit Température" width="800">
+</p>
+
+### 📈 Grafana (Retenu MSPR 1 — Monitoring Temps Réel)
+
+#### Direction Générale (DG Groupe)
 <p align="center">
   <img src="docs/images/grafana_dg.png" alt="Grafana DG Groupe" width="800">
 </p>
 
-### Grafana — Directeur d'Usine
+#### Directeur d'Usine
 <p align="center">
   <img src="docs/images/grafana_usine.png" alt="Grafana Directeur Usine" width="800">
 </p>
 
-### Grafana — Technicien Maintenance
+#### Technicien Maintenance
 <p align="center">
   <img src="docs/images/grafana_technicien.png" alt="Grafana Technicien" width="800">
 </p>
