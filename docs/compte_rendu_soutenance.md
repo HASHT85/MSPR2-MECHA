@@ -400,17 +400,7 @@ Pour chaque mode de defaillance, les capteurs et seuils de detection sont defini
 
 ### 6.4 Matrice de criticite
 
-```
-Gravite
-  5 |         |         | Elec.   |         | Surch.  |
-  4 |         |         |         | Vibr.   |         |
-  3 |         |         | Press.  |         |         |
-  2 |         |         | Outil   |         |         |
-  1 |         |         |         |         |         |
-    +---------+---------+---------+---------+---------+
-      1         2         3         4         5
-                    Frequence
-```
+![Matrice de Criticite AMDEC](docs/images/diag_amdec.png)
 
 ### 6.5 Actions de mitigation par l'IA
 
