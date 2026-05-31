@@ -40,7 +40,7 @@
       "id": 5, "gridPos": { "h": 7, "w": 8, "x": 0, "y": 7 }, "type": "gauge",
       "title": "Temperature",
       "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
-      "fieldConfig": { "defaults": { "unit": "celsius", "min": 20, "max": 120, "decimals": 1, "color": { "mode": "continuous-RdYlGr" }, "thresholds": { "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 80 }, { "color": "#FF5252", "value": 100 }] } } },
+      "fieldConfig": { "defaults": { "unit": "celsius", "min": 20, "max": 120, "decimals": 1, "color": { "mode": "continuous-GrYlRd" }, "thresholds": { "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 80 }, { "color": "#FF5252", "value": 100 }] } } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showThresholdLabels": true, "showThresholdMarkers": true },
       "targets": [{ "rawSql": "SELECT ROUND(AVG(temperature)::numeric, 1) AS temp FROM mecha_data WHERE usine_id = '$usine' AND machine_status = 1;", "format": "table", "rawQuery": true, "refId": "A" }]
     },
@@ -48,7 +48,7 @@
       "id": 6, "gridPos": { "h": 7, "w": 8, "x": 8, "y": 7 }, "type": "gauge",
       "title": "Vibration",
       "datasource": { "uid": "mecha-postgres", "type": "grafana-postgresql-datasource" },
-      "fieldConfig": { "defaults": { "min": 0, "max": 100, "decimals": 1, "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 40 }, { "color": "#FF5252", "value": 60 }] } } },
+      "fieldConfig": { "defaults": { "min": 0, "max": 100, "decimals": 1, "color": { "mode": "continuous-GrYlRd" }, "thresholds": { "steps": [{ "color": "#00E676", "value": null }, { "color": "#FFB300", "value": 40 }, { "color": "#FF5252", "value": 60 }] } } },
       "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showThresholdLabels": true, "showThresholdMarkers": true },
       "targets": [{ "rawSql": "SELECT ROUND(AVG(vibration)::numeric, 1) AS vibr FROM mecha_data WHERE usine_id = '$usine' AND machine_status = 1;", "format": "table", "rawQuery": true, "refId": "A" }]
     },
