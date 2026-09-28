@@ -103,14 +103,14 @@ graph LR
 | **AI4I 2020** (UCI ML Repository) | Donnees reelles machine-outil | 10 000 | Mars 2025 |
 | **Total fusionne** | **Hybride** | **110 000** | Jan-Avr 2025 |
 
-### 12 features ML selectionnees
+### 10 features ML selectionnees (capteurs uniquement)
 `temperature`, `vibration`, `humidity`, `pressure`, `energy_consumption`,
-`predicted_remaining_life`, `temp_rolling_10min`, `temp_trend_1h`,
-`vibr_rolling_10min`, `temp_std_30min`, `energy_vibr_ratio`, `downtime_risk`
+`temp_rolling_10min`, `temp_trend_1h`, `vibr_rolling_10min`, `temp_std_30min`, `energy_vibr_ratio`
 
 ### Precautions
-- **machine_status EXCLUE** des features (data leakage)
-- **Split temporel** 80/20 (pas aleatoire)
+- **machine_status, predicted_remaining_life, downtime_risk EXCLUES** des features (data leakage : ces variables contiennent la reponse)
+- **Split temporel** 80/20 **par source** (pas aleatoire ; donnees reelles AI4I presentes en train et en test)
+- **Metriques ventilees** simule / reel
 - **Desequilibre** gere : class_weight='balanced', scale_pos_weight
 
 ---
@@ -121,16 +121,21 @@ graph LR
 
 | Modele | Accuracy | Precision | Recall | F1 | AUC |
 |--------|----------|-----------|--------|-----|-----|
-| **Random Forest** | 98.4% | 98.8% | 62.1% | **76.3%** | 89.8% |
-| **XGBoost** | 98.4% | 97.9% | 62.0% | **75.9%** | 90.5% |
-| Regression Logistique | 90.5% | 27.3% | 79.2% | 40.6% | 86.8% |
-| Isolation Forest | 74.7% | 9.5% | 59.7% | 16.3% | 77.4% |
-| **RF Regressor (RUL)** | - | - | - | R2=**59.8%** | MAE=39 |
+| **Random Forest** | 97.9% | 72.7% | 90.0% | **80.4%** | 98.8% |
+| **XGBoost** | 98.1% | 74.8% | 88.6% | **81.1%** | 98.8% |
+| Regression Logistique | 71.4% | 13.4% | 92.0% | 23.3% | 89.5% |
+| Isolation Forest | 93.0% | 29.4% | 34.7% | 31.8% | 83.9% |
+| **RF Regressor (RUL)** | - | - | - | R2=**71.9%** | MAE=27 min |
+
+### Par source (Random Forest) : simule F1=82% / reel AI4I F1=7%
+> Limite assumee : les pannes AI4I dependent du couple et de l'usure d'outil, absents des features communes.
 
 ### Top features (importance)
-1. `predicted_remaining_life` (37%) — degradation estimee
-2. `downtime_risk` (20%) — score composite de risque
-3. `temp_rolling_10min` (14%) — tendance temperature
+1. `temp_rolling_10min` (33%) — tendance temperature
+2. `temperature` (19%)
+3. `vibr_rolling_10min` (17%) — tendance vibration
+
+> **Revue technique** : une version anterieure utilisait le RUL et le score de risque en entree (F1 76% trompeur : 99% sur simule, 0.6% sur reel). Corrige avant soutenance.
 
 > **Model cards EU AI Act** : `models/model_cards/`
 
@@ -180,15 +185,15 @@ graph LR
 
 ## Slide 9 : Tests et validation (C5)
 
-### 100 tests automatises — tous OK
+### 102 tests automatises — tous OK (donnees et modeles regeneres en CI)
 
 | Suite de tests | Nombre | Couverture |
 |---------------|--------|------------|
 | Tests API (pytest + httpx) | 61 | 9 endpoints, validation, edge cases |
 | Tests qualite donnees | 19 | Structure, nulls, coherence metier |
-| Tests modeles ML | 14 | Chargement, predictions, features |
+| Tests modeles ML | 16 | Chargement, predictions, features, coherence entrainement/API |
 | Tests integration | 6 | Workflow complet API + ML |
-| **TOTAL** | **100** | **PASS** |
+| **TOTAL** | **102** | **PASS** |
 
 ### Types de tests
 - **Unitaires** : chaque endpoint, chaque modele
@@ -210,7 +215,7 @@ push/PR sur main
  [Lint] -----> ruff check + format
     |
     v
- [Test] -----> pytest --cov (avec PostgreSQL)
+ [Test] -----> regenere donnees + modeles, verifie l'API, pytest --cov
     |
     v
  [Build] ----> docker build api + dashboard
@@ -320,7 +325,7 @@ push/PR sur main
 ### Ce qui fonctionne
 - Pipeline ML complet et reproductible
 - API fonctionnelle avec fallback gracieux
-- 100% des tests passent
+- 100% des tests passent (102), sans aucun test saute en CI
 - Documentation couvrant les 8 competences
 - Dataset hybride (simule + reel)
 

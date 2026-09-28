@@ -118,7 +118,8 @@ Les choix techniques présentés ici sont directement guidés par ces conclusion
 | Modèle | Rôle | Type | Sortie |
 |--------|------|------|--------|
 | **Random Forest** | Classification : « Risque de panne oui/non ? » | Classification binaire | 0 (normal) / 1 (panne imminente) + probabilité |
-| **XGBoost** | Régression : « Dans combien d'heures ? » (RUL) | Régression | Nombre d'heures estimé avant panne |
+| **RF Regressor** | Régression : « Dans combien de temps ? » (RUL) | Régression | Nombre de minutes estimé avant panne (0-500 min) |
+| **XGBoost** | Classification : modèle de secours du Random Forest | Classification binaire | 0 / 1 + probabilité |
 
 ### 4.3 Justification
 

@@ -1,17 +1,33 @@
 {
   "model_name": "XGBoost",
-  "accuracy": 0.9837727272727272,
-  "precision": 0.9791304347826087,
-  "recall": 0.6200440528634361,
-  "f1_score": 0.7592717464598786,
-  "auc_roc": 0.9046796298740738,
+  "accuracy": 0.9805,
+  "precision": 0.747564935064935,
+  "recall": 0.8864292589027911,
+  "f1_score": 0.8110964332892999,
+  "auc_roc": 0.9882502354732853,
   "n_test_samples": 22000,
-  "n_positive_test": 908,
-  "n_negative_test": 21092,
+  "n_positive_test": 1039,
+  "n_negative_test": 20961,
   "confusion_matrix": {
-    "true_negatives": 21080,
-    "false_positives": 12,
-    "false_negatives": 345,
-    "true_positives": 563
+    "true_negatives": 20650,
+    "false_positives": 311,
+    "false_negatives": 118,
+    "true_positives": 921
+  },
+  "per_source": {
+    "MECHA_simulated": {
+      "n": 20000,
+      "n_positive": 1000,
+      "precision": 0.757201646090535,
+      "recall": 0.92,
+      "f1_score": 0.8306997742663657
+    },
+    "AI4I_2020_real": {
+      "n": 2000,
+      "n_positive": 39,
+      "precision": 0.058823529411764705,
+      "recall": 0.02564102564102564,
+      "f1_score": 0.03571428571428571
+    }
   }
 }

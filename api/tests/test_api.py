@@ -10,12 +10,12 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from api.main import app, alert_thresholds
-
+from api.main import alert_thresholds, app
 
 # ==============================================================================
 # Fixtures
 # ==============================================================================
+
 
 @pytest.fixture
 def anyio_backend():
@@ -31,38 +31,36 @@ async def client():
 
 
 # Donnees de test reutilisables
+# Valeurs aux echelles du jeu de donnees MECHA (voir data/data_dictionary.md) :
+# vibration 0-120 mm/s, pression 0.5-5 bar, energie 0.3-7 kWh.
 VALID_SENSOR_DATA = {
     "temperature": 85.0,
-    "vibration": 3.2,
-    "humidity": 45.0,
-    "pressure": 1013.0,
-    "energy_consumption": 150.0,
-    "predicted_remaining_life": 120.0,
+    "vibration": 48.0,
+    "humidity": 55.0,
+    "pressure": 3.0,
+    "energy_consumption": 3.5,
     "temp_rolling_10min": 84.5,
     "temp_trend_1h": 0.3,
-    "vibr_rolling_10min": 3.1,
+    "vibr_rolling_10min": 47.0,
     "temp_std_30min": 1.2,
-    "energy_vibr_ratio": 46.9,
-    "downtime_risk": 0.15,
+    "energy_vibr_ratio": 0.07,
     "machine_id": "MCH-001",
 }
 
 MINIMAL_SENSOR_DATA = {
-    "temperature": 50.0,
-    "vibration": 1.0,
-    "humidity": 40.0,
-    "pressure": 1013.0,
-    "energy_consumption": 100.0,
-    "predicted_remaining_life": 200.0,
+    "temperature": 70.0,
+    "vibration": 35.0,
+    "humidity": 50.0,
+    "pressure": 3.0,
+    "energy_consumption": 2.5,
 }
 
 CRITICAL_SENSOR_DATA = {
     "temperature": 120.0,
-    "vibration": 8.0,
+    "vibration": 90.0,
     "humidity": 85.0,
-    "pressure": 1013.0,
-    "energy_consumption": 250.0,
-    "predicted_remaining_life": 10.0,
+    "pressure": 0.6,
+    "energy_consumption": 6.5,
     "machine_id": "MCH-CRIT",
 }
 
@@ -70,6 +68,7 @@ CRITICAL_SENSOR_DATA = {
 # ==============================================================================
 # Tests -- GET /health
 # ==============================================================================
+
 
 class TestHealthCheck:
     """Tests pour le endpoint /health."""
@@ -116,6 +115,7 @@ class TestHealthCheck:
 # ==============================================================================
 # Tests -- POST /predict
 # ==============================================================================
+
 
 class TestPredict:
     """Tests pour le endpoint /predict."""
@@ -200,14 +200,13 @@ class TestPredict:
         response = await client.post("/predict", json=VALID_SENSOR_DATA)
         data = response.json()
         # En mode test sans modeles charges
-        assert data["model_used"] in (
-            "fallback_heuristic", "random_forest", "xgboost"
-        )
+        assert data["model_used"] in ("fallback_heuristic", "random_forest", "xgboost")
 
 
 # ==============================================================================
 # Tests -- POST /predict/batch
 # ==============================================================================
+
 
 class TestPredictBatch:
     """Tests pour le endpoint /predict/batch."""
@@ -270,6 +269,7 @@ class TestPredictBatch:
 # Tests -- POST /predict/rul
 # ==============================================================================
 
+
 class TestPredictRUL:
     """Tests pour le endpoint /predict/rul."""
 
@@ -285,7 +285,7 @@ class TestPredictRUL:
         response = await client.post("/predict/rul", json=VALID_SENSOR_DATA)
         data = response.json()
 
-        assert "rul_hours" in data
+        assert "rul_minutes" in data
         assert "rul_category" in data
         assert "confidence" in data
         assert "model_used" in data
@@ -296,7 +296,7 @@ class TestPredictRUL:
         """Le RUL doit etre positif ou nul."""
         response = await client.post("/predict/rul", json=VALID_SENSOR_DATA)
         data = response.json()
-        assert data["rul_hours"] >= 0.0
+        assert data["rul_minutes"] >= 0.0
 
     @pytest.mark.anyio
     async def test_rul_valid_category(self, client: AsyncClient):
@@ -308,15 +308,11 @@ class TestPredictRUL:
     @pytest.mark.anyio
     async def test_rul_critical_machine_lower_rul(self, client: AsyncClient):
         """Une machine critique doit avoir un RUL plus bas."""
-        response_normal = await client.post(
-            "/predict/rul", json=MINIMAL_SENSOR_DATA
-        )
-        response_critical = await client.post(
-            "/predict/rul", json=CRITICAL_SENSOR_DATA
-        )
+        response_normal = await client.post("/predict/rul", json=MINIMAL_SENSOR_DATA)
+        response_critical = await client.post("/predict/rul", json=CRITICAL_SENSOR_DATA)
 
-        rul_normal = response_normal.json()["rul_hours"]
-        rul_critical = response_critical.json()["rul_hours"]
+        rul_normal = response_normal.json()["rul_minutes"]
+        rul_critical = response_critical.json()["rul_minutes"]
 
         # La machine critique devrait avoir un RUL inferieur
         assert rul_critical < rul_normal
@@ -331,6 +327,7 @@ class TestPredictRUL:
 # ==============================================================================
 # Tests -- POST /anomaly
 # ==============================================================================
+
 
 class TestAnomalyDetection:
     """Tests pour le endpoint /anomaly."""
@@ -386,9 +383,7 @@ class TestAnomalyDetection:
         assert data["is_anomaly"] is False
 
     @pytest.mark.anyio
-    async def test_anomaly_contributing_factors_on_anomaly(
-        self, client: AsyncClient
-    ):
+    async def test_anomaly_contributing_factors_on_anomaly(self, client: AsyncClient):
         """Les facteurs contributifs doivent etre renseignes si anomalie."""
         response = await client.post("/anomaly", json=CRITICAL_SENSOR_DATA)
         data = response.json()
@@ -403,6 +398,7 @@ class TestAnomalyDetection:
 # ==============================================================================
 # Tests -- GET /metrics
 # ==============================================================================
+
 
 class TestMetrics:
     """Tests pour le endpoint /metrics."""
@@ -452,6 +448,7 @@ class TestMetrics:
 # Tests -- GET /model-info
 # ==============================================================================
 
+
 class TestModelInfo:
     """Tests pour le endpoint /model-info."""
 
@@ -483,13 +480,15 @@ class TestModelInfo:
 
     @pytest.mark.anyio
     async def test_model_info_features_list(self, client: AsyncClient):
-        """La liste des features doit contenir les 12 features attendues."""
+        """La liste des features : 10 features capteurs, sans variable qui fuit."""
         response = await client.get("/model-info")
         data = response.json()
-        assert len(data["features"]) == 12
+        assert len(data["features"]) == 10
         assert "temperature" in data["features"]
         assert "vibration" in data["features"]
-        assert "downtime_risk" in data["features"]
+        # Variables cibles / derivees de la cible : jamais en entree du modele
+        assert "predicted_remaining_life" not in data["features"]
+        assert "downtime_risk" not in data["features"]
 
     @pytest.mark.anyio
     async def test_model_info_compliance_keys(self, client: AsyncClient):
@@ -514,6 +513,7 @@ class TestModelInfo:
 # ==============================================================================
 # Tests -- GET /alerts/config
 # ==============================================================================
+
 
 class TestAlertsConfigGet:
     """Tests pour le endpoint GET /alerts/config."""
@@ -556,6 +556,7 @@ class TestAlertsConfigGet:
 # ==============================================================================
 # Tests -- PUT /alerts/config
 # ==============================================================================
+
 
 class TestAlertsConfigPut:
     """Tests pour le endpoint PUT /alerts/config."""
@@ -642,6 +643,7 @@ class TestAlertsConfigPut:
 # Tests -- Documentation OpenAPI
 # ==============================================================================
 
+
 class TestOpenAPI:
     """Tests pour la documentation OpenAPI auto-generee."""
 
@@ -684,6 +686,7 @@ class TestOpenAPI:
 # Tests -- Validation des entrees (edge cases)
 # ==============================================================================
 
+
 class TestInputValidation:
     """Tests de validation des entrees pour les cas limites."""
 
@@ -696,7 +699,6 @@ class TestInputValidation:
             "humidity": 0.0,
             "pressure": 0.0,
             "energy_consumption": 0.0,
-            "predicted_remaining_life": 0.0,
         }
         response = await client.post("/predict", json=extreme)
         assert response.status_code == 200
@@ -706,11 +708,10 @@ class TestInputValidation:
         """Les valeurs maximales autorisees doivent etre acceptees."""
         max_values = {
             "temperature": 500.0,
-            "vibration": 100.0,
+            "vibration": 200.0,
             "humidity": 100.0,
-            "pressure": 2000.0,
+            "pressure": 20.0,
             "energy_consumption": 9999.0,
-            "predicted_remaining_life": 9999.0,
         }
         response = await client.post("/predict", json=max_values)
         assert response.status_code == 200

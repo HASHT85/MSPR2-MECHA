@@ -49,30 +49,31 @@ Predire si une machine necessite une intervention de maintenance (`maintenance_r
 - **Methode** : Split temporel 80/20 (PAS aleatoire)
 - **Train** : 80% premiers echantillons chronologiquement
 - **Test** : 20% derniers echantillons chronologiquement
+- **Par source** : le split est fait separement pour chaque source (MECHA simule, AI4I reel), sinon toutes les donnees reelles tombent dans le test
 - **Justification** : Eviter le data leakage temporel ; on entraine sur le passe, on teste sur le futur
 
-### Features utilisees (12)
+### Features utilisees (10, capteurs uniquement)
 
 | Feature | Description | Type |
 |---------|-------------|------|
 | `temperature` | Temperature machine (degres C) | Numerique |
-| `vibration` | Niveau de vibration | Numerique |
+| `vibration` | Niveau de vibration (mm/s) | Numerique |
 | `humidity` | Taux d'humidite (%) | Numerique |
 | `pressure` | Pression (bar) | Numerique |
-| `energy_consumption` | Consommation energetique | Numerique |
-| `predicted_remaining_life` | Duree de vie restante estimee | Numerique |
+| `energy_consumption` | Consommation energetique (kWh) | Numerique |
 | `temp_rolling_10min` | Moyenne glissante temperature 10min | Numerique |
 | `temp_trend_1h` | Tendance temperature 1h | Numerique |
 | `vibr_rolling_10min` | Moyenne glissante vibration 10min | Numerique |
 | `temp_std_30min` | Ecart-type temperature 30min | Numerique |
 | `energy_vibr_ratio` | Ratio energie/vibration | Numerique |
-| `downtime_risk` | Score de risque d'arret | Numerique |
 
 ### Features EXCLUES (data leakage)
 
 | Feature exclue | Raison |
 |----------------|--------|
 | `machine_status` | **DATA LEAKAGE** confirme en MSPR 1 : cette variable encode directement l'etat de la machine et fuit l'information cible |
+| `predicted_remaining_life` | **DATA LEAKAGE** identifie en revue MSPR 2 : dans la simulation, RUL = 500 x (1 - degradation) et la cible vaut 1 des que degradation > 0.6 ; la regle « RUL < 200 » reproduit la cible a 99 % |
+| `downtime_risk` | **DATA LEAKAGE** : score composite construit a 45 % a partir du RUL |
 
 ### Desequilibre des classes
 

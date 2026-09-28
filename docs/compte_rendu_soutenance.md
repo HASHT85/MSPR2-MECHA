@@ -84,10 +84,10 @@ Les recommandations formulees en MSPR 1 ont ete systematiquement prises en compt
 
 | Recommandation MSPR 1 | Action MSPR 2 | Statut |
 |------------------------|---------------|--------|
-| Ameliorer le rappel du Random Forest (F1=71%) | Seuil abaisse a 0.3, features temporelles ajoutees, F1 passe a 76.3% | Appliquee |
+| Ameliorer le rappel du Random Forest (F1=71%) | Features temporelles ajoutees, fuite de donnees corrigee : F1 passe a 80.4%, rappel a 90% | Appliquee |
 | Ajouter des features temporelles (moyenne mobile, tendance) | 6 features enrichies (temp_rolling_10min, temp_trend_1h, etc.) | Appliquee |
-| Tester XGBoost | XGBoost entraine et compare (F1=75.9%, AUC=90.5%) | Appliquee |
-| Exclure machine_status (data leakage) | Exclu du pipeline ML, test anti-leakage automatise | Appliquee |
+| Tester XGBoost | XGBoost entraine et compare (F1=81.1%, AUC=98.8%) | Appliquee |
+| Exclure machine_status (data leakage) | Exclu du pipeline ML, ainsi que predicted_remaining_life et downtime_risk (fuite identifiee en revue) ; test anti-leakage automatise | Appliquee |
 | Documenter unites et encodages | Dictionnaire de donnees complet (data_dictionary.md) | Appliquee |
 | Enrichir donnees contextuelles | Ligne production, type piece, profil machine ajoutes | Appliquee |
 | Human-in-the-Loop pour EU AI Act | Mention explicite dans dashboard et API | Appliquee |
@@ -259,7 +259,7 @@ L'analyse des correlations avec la variable cible `maintenance_required` a revel
 
 | Variable | Correlation | Interpretation |
 |----------|------------|----------------|
-| predicted_remaining_life | -0.34 (tres forte) | Plus le RUL diminue, plus le risque augmente |
+| predicted_remaining_life | -0.39 (tres forte) | Plus le RUL diminue, plus le risque augmente. **Cible du modele RUL, jamais utilisee en entree** (fuite de donnees) |
 | temperature | +0.28 (forte) | Temperature elevee = indicateur de panne |
 | vibration | +0.11 (moderee) | Vibrations anormales = usure mecanique |
 | humidity | ~0.00 (nulle) | Non informative |
@@ -280,18 +280,25 @@ Trois types de problemes de maintenance predictive sont couverts :
 | Probleme | Type | Modele | Sortie |
 |----------|------|--------|--------|
 | "Cette machine va-t-elle tomber en panne ?" | Classification binaire | Random Forest, XGBoost, Regression Logistique | 0 (normal) / 1 (maintenance requise) + probabilite |
-| "Dans combien de temps ?" | Regression | RF Regressor RUL | Nombre d'heures estimees avant panne |
+| "Dans combien de temps ?" | Regression | RF Regressor RUL | Nombre de minutes estimees avant panne (RUL, 0-500 min) |
 | "Le comportement est-il anormal ?" | Detection d'anomalies | Isolation Forest | Score d'anomalie + severite |
 
 ### 5.2 Protocole d'entrainement
 
-**Split temporel 80/20** : Les donnees sont triees par timestamp. Les 80% les plus anciennes constituent le jeu d'entrainement (88 000 enregistrements), les 20% les plus recentes constituent le jeu de test (22 000 enregistrements). Ce choix evite le data leakage temporel qu'un split aleatoire aurait introduit.
+**Split temporel 80/20 par source de donnees** : Les donnees sont triees par timestamp, separement pour chaque source (MECHA simule : janvier 2025 ; AI4I reel : mars-avril 2025). Pour chaque source, les 80% les plus anciens constituent le jeu d'entrainement, les 20% les plus recents le jeu de test (88 000 / 22 000 enregistrements au total). Ce choix evite le data leakage temporel d'un split aleatoire, et garantit que les donnees reelles AI4I sont presentes a l'entrainement : un split temporel global les aurait toutes placees dans le jeu de test (periodes disjointes).
 
-**Features utilisees** (12) : temperature, vibration, humidity, pressure, energy_consumption, predicted_remaining_life, temp_rolling_10min, temp_trend_1h, vibr_rolling_10min, temp_std_30min, energy_vibr_ratio, downtime_risk
+**Features utilisees** (10, capteurs uniquement) : temperature, vibration, humidity, pressure, energy_consumption, temp_rolling_10min, temp_trend_1h, vibr_rolling_10min, temp_std_30min, energy_vibr_ratio
 
-**Variable exclue** : `machine_status` — cette variable a ete identifiee en MSPR 1 comme source de data leakage. Un test automatise verifie son exclusion.
+**Variables exclues (data leakage)** :
+- `machine_status` — identifiee en MSPR 1 : encode directement l'etat panne.
+- `predicted_remaining_life` — dans la simulation, RUL = 500 x (1 - degradation) et la cible vaut 1 des que la degradation depasse 0.6 : la simple regle « RUL < 200 » reproduit la cible a 99 %. C'est en outre la cible du modele RUL.
+- `downtime_risk` — score composite construit a 45 % a partir du RUL.
 
-**Gestion du desequilibre** : La classe positive (maintenance requise) represente seulement 3.1% des echantillons (908 sur 22 000 dans le jeu de test). Deux techniques sont appliquees :
+Un test automatise (`tests/test_data_quality.py`, `api/tests/test_api.py`) verifie que ces variables ne figurent pas dans les entrees des modeles ni de l'API.
+
+**Note de revue technique** : une premiere version du pipeline utilisait `predicted_remaining_life` et `downtime_risk` en entree (12 features). Elle affichait un F1 de 76 % qui masquait un modele quasi parfait sur les donnees simulees (F1 = 0.99) et nul sur les donnees reelles AI4I (F1 = 0.006), ces dernieres etant integralement dans le jeu de test. La correction (retrait des deux variables, split par source, metriques ventilees par source) a ete appliquee avant la soutenance ; les resultats ci-dessous sont ceux du pipeline corrige.
+
+**Gestion du desequilibre** : La classe positive (maintenance requise) represente 4.7% des echantillons du jeu de test (1 039 sur 22 000). Deux techniques sont appliquees :
 - Random Forest : parametre `class_weight='balanced'`
 - XGBoost : parametre `scale_pos_weight` calcule automatiquement (ratio negatifs/positifs)
 
@@ -303,29 +310,38 @@ Trois types de problemes de maintenance predictive sont couverts :
 
 | Metrique | Random Forest | XGBoost | Regression Logistique |
 |----------|:------------:|:-------:|:--------------------:|
-| Accuracy | 98.4% | 98.4% | 90.5% |
-| Precision | 98.8% | 97.9% | 27.3% |
-| Recall | 62.1% | 62.0% | 79.2% |
-| F1-Score | 76.3% | 75.9% | 40.6% |
-| AUC-ROC | 0.898 | 0.905 | 0.868 |
-| Faux positifs | 7 | 12 | 1 912 |
-| Faux negatifs | 344 | 345 | 189 |
-| Vrais positifs | 564 | 563 | 719 |
+| Accuracy | 97.9% | 98.1% | 71.4% |
+| Precision | 72.7% | 74.8% | 13.4% |
+| Recall | 90.0% | 88.6% | 92.0% |
+| F1-Score | 80.4% | 81.1% | 23.3% |
+| AUC-ROC | 0.988 | 0.988 | 0.895 |
+| Faux positifs | 351 | 311 | 6 202 |
+| Faux negatifs | 104 | 118 | 83 |
+| Vrais positifs | 935 | 921 | 956 |
 
-**Analyse** : Le Random Forest et le XGBoost atteignent des performances quasi-identiques. Le Random Forest est retenu comme modele principal en raison de sa meilleure interpretabilite (feature importance native). Le XGBoost sert de modele de secours (meilleur AUC-ROC : 0.905 contre 0.898).
+**Ventilation par source de donnees (Random Forest)** :
 
-La Regression Logistique sert de baseline. Son recall eleve (79.2%) mais sa precision tres faible (27.3%) la rendent inutilisable en production (trop de fausses alertes).
+| Source du jeu de test | Lignes | Positifs | Precision | Recall | F1 |
+|-----------------------|-------:|---------:|:---------:|:------:|:--:|
+| MECHA simule | 20 000 | 1 000 | 73.5% | 93.3% | 82.2% |
+| AI4I 2020 (reel) | 2 000 | 39 | 12.5% | 5.1% | 7.3% |
+
+**Analyse** : Le Random Forest et le XGBoost atteignent des performances quasi-identiques. Le Random Forest est retenu comme modele principal en raison de sa meilleure interpretabilite (feature importance native) ; le XGBoost sert de modele de secours. En maintenance predictive, le rappel (90 %) prime sur la precision (73 %) : une panne manquee coute bien plus qu'une verification inutile, et chaque alerte est validee par un humain (Human-in-the-Loop).
+
+Sur les donnees reelles AI4I, le modele reste faible (F1 = 7 %) : l'harmonisation ne conserve que la temperature d'air et une vibration derivee de la vitesse de rotation, alors que les pannes AI4I dependent du couple et de l'usure d'outil, absents des 10 features communes. Cette limite est documentee (section 14.3) et constitue la premiere perspective d'amelioration.
+
+La Regression Logistique sert de baseline. Son recall eleve (92.0%) mais sa precision tres faible (13.4%) la rendent inutilisable en production (trop de fausses alertes).
 
 #### Modele de detection d'anomalies
 
 | Metrique | Isolation Forest |
 |----------|:---------------:|
-| Accuracy | 74.7% |
-| Precision | 9.5% |
-| Recall | 59.7% |
-| AUC-ROC | 0.774 |
-| Anomalies detectees | 5 735 |
-| Contamination effective | 26.1% |
+| Accuracy | 93.0% |
+| Precision | 29.4% |
+| Recall | 34.7% |
+| AUC-ROC | 0.839 |
+| Anomalies detectees | 1 226 |
+| Contamination effective | 5.6% |
 
 L'Isolation Forest, en tant que modele non supervise, a une precision faible mais permet de detecter des comportements atypiques sans labels prealables. Il est utilise en complement des modeles supervises.
 
@@ -333,30 +349,32 @@ L'Isolation Forest, en tant que modele non supervise, a une precision faible mai
 
 | Metrique | RF Regressor RUL |
 |----------|:----------------:|
-| MAE | 39.25 heures |
-| RMSE | 69.28 heures |
-| R-carre | 0.598 (59.8%) |
-| MSE | 4 799.84 |
+| MAE | 26.9 minutes |
+| RMSE | 46.4 minutes |
+| R-carre | 0.719 (71.9%) |
+| MSE | 2 149.08 |
 
-Le modele RUL predit le temps restant avant defaillance avec une erreur moyenne de 39 heures. La categorisation est : urgent (inferieur a 24h), soon (inferieur a 72h), moderate (inferieur a 168h), safe (superieur ou egal a 168h).
+Le modele RUL predit le temps restant avant defaillance (en minutes, sur une echelle 0-500 min propre au jeu de donnees) avec une erreur moyenne de 27 minutes. La categorisation, alignee sur les seuils du dashboard, est : urgent (inferieur a 50 min), soon (inferieur a 150 min), moderate (inferieur a 300 min), safe (superieur ou egal a 300 min).
 
 ### 5.4 Progression MSPR 1 vers MSPR 2
 
 | Modele | F1 MSPR 1 | F1 MSPR 2 | Progression |
 |--------|-----------|-----------|-------------|
-| Random Forest | 71.0% | 76.3% | +5.3 points |
-| Isolation Forest | 38.2% | 16.3% | -21.9 points (desequilibre accru) |
-| Regression Logistique | 47.2% | 40.6% | -6.6 points (baseline) |
-| XGBoost | Non teste | 75.9% | Nouveau |
-| RF Regressor RUL | Non teste | R-carre=59.8% | Nouveau |
+| Random Forest | 71.0% | 80.4% | +9.4 points |
+| Isolation Forest | 38.2% | 31.8% | -6.4 points (role complementaire) |
+| Regression Logistique | 47.2% | 23.3% | -23.9 points (baseline) |
+| XGBoost | Non teste | 81.1% | Nouveau |
+| RF Regressor RUL | Non teste | R-carre=71.9% | Nouveau |
 
-L'objectif MSPR 1 de F1 superieur ou egal a 75% est atteint pour le Random Forest (76.3%).
+L'objectif MSPR 1 de F1 superieur ou egal a 75% est atteint pour le Random Forest (80.4%) et le XGBoost (81.1%), sans aucune variable derivee de la cible en entree.
 
 ### 5.5 Top 3 des features les plus importantes
 
-1. `predicted_remaining_life` — 37% d'importance
-2. `downtime_risk` — 20% d'importance
-3. `temp_rolling_10min` — 14% d'importance
+1. `temp_rolling_10min` — 33% d'importance (moyenne glissante de temperature sur 10 min)
+2. `temperature` — 19% d'importance
+3. `vibr_rolling_10min` — 17% d'importance
+
+Les features temporelles recommandees en MSPR 1 (moyennes glissantes) sont devenues les variables les plus predictives une fois les variables derivees de la cible retirees.
 
 ### 5.6 Model Cards (conformite EU AI Act)
 
@@ -416,8 +434,8 @@ Pour chaque mode de defaillance, les capteurs et seuils de detection sont defini
 
 | Mode de defaillance IA | Frequence | Gravite | Criticite | Mitigation |
 |------------------------|:---------:|:-------:|:---------:|------------|
-| Faux negatif (panne non detectee) | 3 | 5 | 15 | Seuil de prediction abaisse a 0.3 (vs 0.5), double validation par Isolation Forest |
-| Faux positif (fausse alerte) | 2 | 2 | 4 | Precision de 98.8%, validation Human-in-the-Loop |
+| Faux negatif (panne non detectee) | 3 | 5 | 15 | Rappel de 90 % (class_weight balanced), seuil de decision configurable (PREDICTION_THRESHOLD), double validation par Isolation Forest |
+| Faux positif (fausse alerte) | 3 | 2 | 6 | Precision de 73% (compromis assume en faveur du rappel), validation Human-in-the-Loop |
 | Derive du modele (concept drift) | 3 | 4 | 12 | Monitoring F1 en production, reentrainement trimestriel |
 | Donnees manquantes (capteur defaillant) | 3 | 3 | 9 | Imputation par mediane, mode fallback heuristique |
 | Indisponibilite API | 2 | 4 | 8 | Health check toutes les 10s, redemarrage automatique Docker |
@@ -448,7 +466,7 @@ L'API constitue le coeur de la solution applicative. Elle expose 9 endpoints RES
 | GET | /health | Health check (etat modeles, uptime) | — |
 | POST | /predict | Prediction maintenance unitaire | Random Forest (fallback: XGBoost) |
 | POST | /predict/batch | Prediction batch (max 100 machines) | Random Forest |
-| POST | /predict/rul | Estimation RUL (heures restantes) | RF Regressor |
+| POST | /predict/rul | Estimation RUL (minutes restantes) | RF Regressor |
 | POST | /anomaly | Detection d'anomalies | Isolation Forest |
 | GET | /metrics | Metriques performance et statistiques API | — |
 | GET | /model-info | Model Cards (EU AI Act) | — |
@@ -456,39 +474,43 @@ L'API constitue le coeur de la solution applicative. Elle expose 9 endpoints RES
 | PUT | /alerts/config | Modification des seuils d'alerte | — |
 
 **Caracteristiques techniques** :
-- 1 157 lignes de code
+- 1 177 lignes de code
 - 10 schemas Pydantic pour la validation des entrees/sorties
 - Chaine de fallback : Random Forest, puis XGBoost, puis heuristique mock
 - Categorisation automatique du risque : low, medium, high, critical
-- Categorisation RUL : urgent (inferieur a 24h), soon (inferieur a 72h), moderate (inferieur a 168h), safe
+- Categorisation RUL : urgent (inferieur a 50 min), soon (inferieur a 150 min), moderate (inferieur a 300 min), safe
+- Entrees : 10 mesures capteurs uniquement (le RUL et le score de risque ne sont jamais demandes au client : ce sont des sorties)
+- GET /metrics expose les metriques d'entrainement reelles (fichier all_models_metrics.json), ventilees par source de donnees
 - Authentification par cle API (header X-API-Key)
 - CORS configurable
 - Documentation Swagger auto-generee
 
 ### 7.2 Dashboard Streamlit — 5 vues metier
 
-Le dashboard Streamlit (918 lignes, 34 675 octets) offre 5 vues adaptees aux differents profils utilisateurs :
+Le dashboard Streamlit (1 564 lignes) offre 5 vues adaptees aux differents profils utilisateurs.
+
+**Integration avec l'API** : toutes les predictions IA affichees par le dashboard proviennent de l'API REST (`POST /predict/batch` pour les tableaux de machines et le centre d'alertes, `POST /predict`, `POST /predict/rul` et `POST /anomaly` pour le diagnostic d'une machine, `GET /health`, `GET /metrics` et `GET /model-info` pour la vue Modele IA). Le dashboard n'embarque aucun modele. Les donnees historiques (courbes capteurs, KPIs de production) sont lues depuis le jeu de donnees charge en base. Si l'API est indisponible, le dashboard l'indique dans la barre laterale et se replie sur les indicateurs historiques.
 
 **Vue 1 — Groupe (Direction Generale)**
 KPIs consolides des 5 usines : TRS global, taux de maintenance, taux d'anomalies, nombre de machines actives, RUL moyen. Comparaison inter-sites et repartition des pannes par usine.
 
 **Vue 2 — Site (Directeur d'Usine)**
-Vue operationnelle par usine avec filtrage par site. KPIs du site, etat de chaque machine (profil, temperature, vibration, RUL, risque), alertes actives en temps reel.
+Vue operationnelle par usine avec filtrage par site. KPIs du site, etat de chaque machine (profil, temperature, vibration, RUL, probabilite de maintenance et prediction IA via `POST /predict/batch`), alertes actives en temps reel, dont les alertes « maintenance predite par l'IA ».
 
 ![Vue Site Streamlit](docs/images/streamlit_site.png)
 
 **Vue 3 — Machine (Equipe Maintenance)**
-Diagnostic individuel d'une machine. Capteurs en temps reel (temperature, vibration, RUL sur 3 jours), jauge de score de risque d'arret (0-100%), facteurs de risque normalises.
+Diagnostic individuel d'une machine. Capteurs en temps reel (temperature, vibration, RUL sur 3 jours), jauge de probabilite de maintenance calculee par l'API (0-100%), bloc « Diagnostic IA » (RUL predit et categorie via `POST /predict/rul`, anomalie et facteurs contributifs via `POST /anomaly`, alertes de seuil), facteurs de risque normalises.
 
 ![Vue Machine Streamlit](docs/images/streamlit_machine.png)
 
 **Vue 4 — Alertes (Tous niveaux)**
-Centre d'alertes avec filtres par usine, type et severite. Compteurs : alertes critiques, alertes majeures, total. Tableau detaille avec horodatage, machine, type, niveau et detail.
+Centre d'alertes avec filtres par usine, type et profil machine. Quatre types d'alertes : temperature critique, RUL critique, panne, et « Prediction IA » (maintenance predite par l'API sur la derniere mesure de chaque machine). Compteurs : alertes critiques, alertes majeures, total. Tableau detaille avec horodatage, machine, type, niveau et detail.
 
 ![Centre d'Alertes Streamlit](docs/images/streamlit_alertes.png)
 
 **Vue 5 — Modele IA (Data Team)**
-Comparaison des 5 modeles ML, distribution de la variable cible, correlation des features avec maintenance_required, distribution par profil de machine. Conformite EU AI Act affichee.
+Etat des modeles charges par l'API (`GET /health`), comparaison des 5 modeles ML a partir des metriques d'entrainement exposees par `GET /metrics`, performance ventilee par source de donnees (simule vs reel), distribution de la variable cible, correlation des features avec maintenance_required, distribution par profil de machine. Conformite EU AI Act affichee.
 
 ![Performance Modele IA Streamlit](docs/images/streamlit_modele_ia.png)
 
@@ -538,16 +560,22 @@ Filtrable par usine (variable Grafana). 4 KPIs du site (Machines Actives 21, Tau
 
 ### 8.2 Tests implementes
 
-**Tests de qualite des donnees** (test_data_quality.py — 14 tests)
+**Tests de qualite des donnees** (test_data_quality.py — 19 tests)
 - Structure du dataset : non vide, minimum 50 000 lignes, colonnes obligatoires presentes, colonnes enrichies presentes
 - Qualite des donnees : pas de valeurs nulles sur les colonnes critiques, plages de valeurs respectees (temperature entre -10 et 200, vibration positive, RUL positive)
 - Coherence metier : 50 a 100 machines, 5 usines, noms d'usines corrects, minimum 10 machines par usine, variable cible binaire, test anti-leakage machine_status, downtime_risk entre 0 et 1
 
-**Tests des modeles ML** (test_model.py — 12 tests)
-- Random Forest : chargement, prediction, prediction binaire, predict_proba, nombre de features
+**Tests des modeles ML** (test_model.py — 16 tests)
+- Random Forest : chargement, prediction, prediction binaire, predict_proba, nombre de features (10)
 - XGBoost : chargement, prediction, prediction binaire
 - Isolation Forest : chargement, prediction, sortie dans {-1, 1}
-- RF Regressor RUL : chargement, prediction positive (11 features), prediction numerique
+- RF Regressor RUL : chargement, prediction positive (10 features), prediction numerique
+- Coherence entrainement / API : les noms de fichiers sauvegardes par `train_models.py` sont exactement ceux charges par `api/main.py`
+- Chargement reel : un modele sauvegarde sous le nom d'entrainement est charge par l'API et utilise par `/predict` (`model_used = random_forest`, pas le mode mock)
+
+**Tests des endpoints API** (api/tests/test_api.py — 61 tests)
+- Les 9 endpoints, validation Pydantic (plages capteurs), cas limites, seuils d'alerte, documentation OpenAPI
+- Verification que les entrees de l'API ne contiennent ni `predicted_remaining_life` ni `downtime_risk` (anti-fuite)
 
 **Tests d'integration** (test_integration.py — 6 tests)
 - Machine normale non detectee comme critique
@@ -559,10 +587,12 @@ Filtrable par usine (variable Grafana). 4 KPIs du site (Machines Actives 21, Tau
 
 ### 8.3 Donnees de test
 
-| Jeu | Temperature | Vibration | RUL | Risque | Attendu |
-|-----|:---------:|:---------:|:---:|:------:|---------|
-| SAMPLE_NORMAL | 75 degres C | 35 mm/s | 400 min | 0.1 | Pas d'alerte |
-| SAMPLE_CRITICAL | 115 degres C | 85 mm/s | 10 min | 0.95 | Alerte critique |
+| Jeu | Temperature | Vibration | Pression | Energie | Attendu |
+|-----|:---------:|:---------:|:--------:|:-------:|---------|
+| SAMPLE_NORMAL | 75 degres C | 35 mm/s | 3.0 bar | 2.5 kWh | Pas d'alerte |
+| SAMPLE_CRITICAL | 115 degres C | 85 mm/s | 1.0 bar | 6.5 kWh | Alerte critique, RUL inferieur au cas normal |
+
+Les jeux de test sont exprimes aux echelles du dictionnaire de donnees (vibration 0-120 mm/s, pression 0.5-5 bar, energie 0.3-7 kWh). Le RUL et le score de risque ne font pas partie des entrees : ce sont des sorties du systeme.
 
 ### 8.4 Seuils d'acceptation
 
@@ -591,7 +621,7 @@ Filtrable par usine (variable Grafana). 4 KPIs du site (Machines Actives 21, Tau
 
 ### 9.1 Pipeline GitHub Actions
 
-La pipeline CI/CD est implementee dans `.github/workflows/ci.yml` (146 lignes) et s'execute a chaque push ou Pull Request sur la branche main :
+La pipeline CI/CD est implementee dans `.github/workflows/ci.yml` (160 lignes) et s'execute a chaque push ou Pull Request sur la branche main :
 
 ![Pipeline CI/CD GitHub Actions](docs/images/diag_cicd.png)
 
@@ -600,11 +630,14 @@ La pipeline CI/CD est implementee dans `.github/workflows/ci.yml` (146 lignes) e
 **Job 1 — Lint (Ruff)**
 - Environnement : Ubuntu, Python 3.11
 - Commandes : `ruff check` (verification regles de style), `ruff format --check` (verification formatage)
+- Regles figees dans `ruff.toml` (E4, E7, E9, F, I) pour un resultat identique quelle que soit la version de Ruff
 - Bloquant : le job suivant ne demarre pas si le lint echoue
 
 **Job 2 — Tests (pytest)**
-- Prerequis : service PostgreSQL 15-alpine lance pour les tests d'integration
-- Commandes : `pytest` avec couverture (--cov=api --cov=models)
+- Reproductibilite de bout en bout : regeneration du jeu de donnees (`generate_data.py`, `merge_datasets.py`) puis entrainement des 5 modeles (`train_models.py`) a chaque execution
+- Verification que l'API charge reellement les modeles entraines (`GET /health` : `models_loaded = true`), sinon le job echoue
+- Commandes : `pytest` avec couverture (--cov=api --cov=models) ; aucun test n'est saute
+- Artefact uploade : modeles `.joblib` et metriques JSON conserves 14 jours
 - Rapports generes : XML (machine-readable) + HTML (human-readable)
 - Artefact uploade : rapport de couverture conserve 14 jours
 - Cache pip active pour accelerer l'installation
@@ -855,7 +888,7 @@ Criteres de declenchement du retour arriere :
 | Endpoints API | 9 routes REST |
 | Vues Streamlit | 5 pages metier |
 | Dashboards Grafana | 3 par role |
-| Tests automatises | 38+ tests (14 donnees + 12 modeles + 6 integration + tests API) |
+| Tests automatises | 102 tests (19 donnees + 16 modeles + 6 integration + 61 API) |
 | Documents techniques | 9 documents, 180+ Ko |
 | Services Docker | 4 conteneurs |
 | Pipeline CI/CD | 3 jobs (lint, test, build) |
@@ -867,7 +900,7 @@ Criteres de declenchement du retour arriere :
 |------------|------------|--------|
 | C1 | Collecter les besoins metiers | client_interview.md — Entretien 2h30, 24 questions, 10 besoins fonctionnels |
 | C2 | Concevoir une architecture applicative | architecture.md + technical_choices.md — 7 couches, 10 comparatifs |
-| C3 | Developper une application | API FastAPI (1 157 lignes) + Dashboard Streamlit (918 lignes) + Pipeline ML (887 lignes) |
+| C3 | Developper une application | API FastAPI (1 177 lignes) + Dashboard Streamlit (1 564 lignes, consommant l'API) + Pipeline ML (1 007 lignes) |
 | C4 | Developper une solution integree | 9 endpoints API + 5 vues Streamlit + 3 dashboards Grafana + regles metier |
 | C5 | Effectuer les tests | validation_plan.md + 38 tests implementes + 5 scenarios de recette |
 | C6 | Appliquer l'integration continue | .github/workflows/ci.yml — 3 jobs sequentiels |
@@ -879,8 +912,10 @@ Criteres de declenchement du retour arriere :
 | Limite | Impact | Plan de remediation |
 |--------|--------|---------------------|
 | Donnees synthetiques | Performances reelles peuvent differer | Reevaluation avec donnees de production |
-| Recall a 62% | 38% des pannes non detectees | Optimisation du seuil, enrichissement features |
-| R-carre RUL a 59.8% | Precision limitee de l'estimation du temps avant panne | Ajout de features temporelles, modele LSTM |
+| Precision a 73% | Environ une alerte sur quatre est une fausse alerte (compromis en faveur du rappel de 90%) | Optimisation du seuil par usine, validation Human-in-the-Loop |
+| Donnees reelles AI4I : F1 = 7% | Le modele n'apprend pas les pannes AI4I : l'harmonisation ne conserve que la temperature d'air et une vibration derivee de la vitesse, alors que les pannes AI4I dependent du couple et de l'usure d'outil | Ajouter torque et tool_wear aux features communes, ou entrainer un modele dedie par famille de machines |
+| R-carre RUL a 71.9% | Precision limitee de l'estimation du temps avant panne (MAE 27 min sur une echelle de 500 min) | Ajout de features temporelles longues, modele LSTM |
+| RUL exprime en minutes (0-500) | Echelle propre a la simulation, peu realiste industriellement | Recalibrer la simulation sur des horizons de plusieurs jours |
 | Pas de deep learning | Potentiellement moins performant sur les sequences longues | LSTM prevu si donnees suffisantes (plus de 2 ans d'historique) |
 | Base centralisee | Point unique de defaillance | Backup quotidien, buffer local par site |
 | Streamlit = prototypage | Interface moins professionnelle qu'une application custom | Suffisant pour la V1, refonte React possible en V2 |
@@ -916,10 +951,10 @@ Criteres de declenchement du retour arriere :
 
 | Composant | Fichiers | Volume |
 |-----------|----------|--------|
-| API FastAPI | api/main.py, api/Dockerfile | 1 157 lignes |
-| Dashboard Streamlit | app/src/dashboard.py, app/Dockerfile | 918 lignes |
+| API FastAPI | api/main.py, api/Dockerfile | 1 177 lignes |
+| Dashboard Streamlit | app/src/dashboard.py, app/Dockerfile | 1 564 lignes |
 | Scripts data | generate_data.py, merge_datasets.py | 931 lignes |
-| Pipeline ML | train_models.py | 887 lignes |
+| Pipeline ML | train_models.py | 1 007 lignes |
 | Schema BDD | db/init.sql, db/load_data.sh | 123 lignes |
 | Tests | 3 fichiers (data, modeles, integration) | 432 lignes |
 | CI/CD | .github/workflows/ci.yml | 146 lignes |

@@ -24,7 +24,7 @@ from typing import Any, Optional
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 # ==============================================================================
 # Configuration
@@ -55,34 +55,53 @@ logger = logging.getLogger("mecha.api")
 # Features ML attendues par les modeles
 # ==============================================================================
 
+# Doit rester identique a FEATURES dans models/training/train_models.py.
+# Les variables predicted_remaining_life et downtime_risk sont volontairement
+# absentes : elles contiennent la reponse (data leakage) -- voir train_models.py.
 ML_FEATURE_NAMES: list[str] = [
     "temperature",
     "vibration",
     "humidity",
     "pressure",
     "energy_consumption",
-    "predicted_remaining_life",
     "temp_rolling_10min",
     "temp_trend_1h",
     "vibr_rolling_10min",
     "temp_std_30min",
     "energy_vibr_ratio",
-    "downtime_risk",
 ]
+
+# RUL maximal du jeu de donnees (minutes) -- utilise par le mode fallback
+RUL_MAX_MINUTES = 500.0
+
+# Seuil de decision sur la probabilite de maintenance (classe positive).
+# 0.5 = decision standard (valeur utilisee pour les metriques d'entrainement).
+# Abaisser le seuil augmente le rappel au prix de la precision.
+PREDICTION_THRESHOLD = float(os.getenv("PREDICTION_THRESHOLD", "0.5"))
 
 
 # ==============================================================================
 # Chargement des modeles ML
 # ==============================================================================
 
+# Noms des fichiers produits par models/training/train_models.py (MODEL_FILENAMES).
+# Toute modification doit etre faite des deux cotes ; un test verifie la coherence.
+MODEL_FILES: dict[str, str] = {
+    "classifier": "random_forest_classifier.joblib",
+    "xgboost": "xgboost_classifier.joblib",
+    "isolation_forest": "isolation_forest.joblib",
+    "rul_regressor": "rf_regressor_rul.joblib",
+}
+
+
 class ModelRegistry:
     """Registre central des modeles ML charges en memoire."""
 
     def __init__(self) -> None:
-        self.classifier: Any = None          # Random Forest (classification)
-        self.xgboost: Any = None             # XGBoost (classification)
-        self.isolation_forest: Any = None    # Isolation Forest (anomalies)
-        self.rul_regressor: Any = None       # RF Regressor (RUL)
+        self.classifier: Any = None  # Random Forest (classification)
+        self.xgboost: Any = None  # XGBoost (classification)
+        self.isolation_forest: Any = None  # Isolation Forest (anomalies)
+        self.rul_regressor: Any = None  # RF Regressor (RUL)
         self.loaded: bool = False
         self.load_errors: dict[str, str] = {}
         self.load_timestamp: Optional[str] = None
@@ -96,15 +115,8 @@ class ModelRegistry:
             self.load_errors["joblib"] = "Module joblib non installe"
             return
 
-        model_files = {
-            "classifier": "random_forest.joblib",
-            "xgboost": "xgboost_model.joblib",
-            "isolation_forest": "isolation_forest.joblib",
-            "rul_regressor": "rf_regressor_rul.joblib",
-        }
-
         any_loaded = False
-        for attr, filename in model_files.items():
+        for attr, filename in MODEL_FILES.items():
             filepath = MODEL_DIR / filename
             try:
                 if filepath.exists():
@@ -138,6 +150,7 @@ models = ModelRegistry()
 # Seuils d'alerte MECHA (configuration mutable)
 # ==============================================================================
 
+
 class AlertThresholds:
     """Seuils d'alerte configurables pour le systeme MECHA."""
 
@@ -149,12 +162,8 @@ class AlertThresholds:
         self.temperature_critical: float = float(
             os.getenv("ALERT_TEMP_CRITICAL", "100")
         )
-        self.rebuts_max_percent: float = float(
-            os.getenv("ALERT_REBUTS_MAX", "3.0")
-        )
-        self.trs_min_percent: float = float(
-            os.getenv("ALERT_TRS_MIN", "75")
-        )
+        self.rebuts_max_percent: float = float(os.getenv("ALERT_REBUTS_MAX", "3.0"))
+        self.trs_min_percent: float = float(os.getenv("ALERT_TRS_MIN", "75"))
         self.cycle_deviation_max_percent: float = float(
             os.getenv("ALERT_CYCLE_DEVIATION", "15")
         )
@@ -174,10 +183,18 @@ class AlertThresholds:
 
 alert_thresholds = AlertThresholds()
 
+# Seuils capteurs fixes (echelles du jeu de donnees MECHA, cf. data_dictionary.md)
+VIBRATION_WARNING = 50.0  # mm/s
+VIBRATION_CRITICAL = 70.0  # mm/s (identique au dashboard)
+ENERGY_HIGH = 5.0  # kWh (plage normale 0.3 - 7)
+PRESSURE_MIN = 1.0  # bar
+PRESSURE_MAX = 5.0  # bar
+
 
 # ==============================================================================
 # Modeles Pydantic -- Schemas d'entree / sortie
 # ==============================================================================
+
 
 class SensorInput(BaseModel):
     """Donnees capteur d'une machine pour la prediction."""
@@ -186,19 +203,14 @@ class SensorInput(BaseModel):
         ..., ge=-50, le=500, description="Temperature en degres Celsius"
     )
     vibration: float = Field(
-        ..., ge=0, le=100, description="Niveau de vibration (mm/s)"
+        ..., ge=0, le=200, description="Niveau de vibration (mm/s, plage 0-120)"
     )
-    humidity: float = Field(
-        ..., ge=0, le=100, description="Humidite relative (%)"
-    )
+    humidity: float = Field(..., ge=0, le=100, description="Humidite relative (%)")
     pressure: float = Field(
-        ..., ge=0, le=2000, description="Pression (hPa)"
+        ..., ge=0, le=20, description="Pression de fonctionnement (bar, plage 0.5-5)"
     )
     energy_consumption: float = Field(
-        ..., ge=0, description="Consommation energetique (kWh)"
-    )
-    predicted_remaining_life: float = Field(
-        ..., ge=0, description="Duree de vie restante estimee (heures)"
+        ..., ge=0, description="Consommation energetique (kWh, plage 0.3-7)"
     )
     temp_rolling_10min: Optional[float] = Field(
         None, description="Moyenne glissante temperature 10 min"
@@ -215,30 +227,27 @@ class SensorInput(BaseModel):
     energy_vibr_ratio: Optional[float] = Field(
         None, description="Ratio energie / vibration"
     )
-    downtime_risk: Optional[float] = Field(
-        None, ge=0, le=1, description="Risque d'arret (0-1)"
-    )
-    machine_id: Optional[str] = Field(
-        None, description="Identifiant de la machine"
-    )
+    machine_id: Optional[str] = Field(None, description="Identifiant de la machine")
 
-    model_config = {"json_schema_extra": {
-        "examples": [{
-            "temperature": 85.0,
-            "vibration": 3.2,
-            "humidity": 45.0,
-            "pressure": 1013.0,
-            "energy_consumption": 150.0,
-            "predicted_remaining_life": 120.0,
-            "temp_rolling_10min": 84.5,
-            "temp_trend_1h": 0.3,
-            "vibr_rolling_10min": 3.1,
-            "temp_std_30min": 1.2,
-            "energy_vibr_ratio": 46.9,
-            "downtime_risk": 0.15,
-            "machine_id": "MCH-001",
-        }]
-    }}
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "temperature": 85.0,
+                    "vibration": 48.0,
+                    "humidity": 55.0,
+                    "pressure": 3.0,
+                    "energy_consumption": 3.5,
+                    "temp_rolling_10min": 84.5,
+                    "temp_trend_1h": 0.3,
+                    "vibr_rolling_10min": 47.0,
+                    "temp_std_30min": 1.2,
+                    "energy_vibr_ratio": 0.07,
+                    "machine_id": "MCH-001",
+                }
+            ]
+        }
+    }
 
 
 class PredictionResponse(BaseModel):
@@ -248,29 +257,20 @@ class PredictionResponse(BaseModel):
     prediction: str = Field(
         ..., description="Etat predit : 'normal' ou 'maintenance_required'"
     )
-    confidence: float = Field(
-        ..., ge=0, le=1, description="Score de confiance (0-1)"
-    )
+    confidence: float = Field(..., ge=0, le=1, description="Score de confiance (0-1)")
     risk_level: str = Field(
         ..., description="Niveau de risque : 'low', 'medium', 'high', 'critical'"
     )
-    alerts: list[str] = Field(
-        default_factory=list, description="Alertes declenchees"
-    )
-    model_used: str = Field(
-        ..., description="Modele utilise pour la prediction"
-    )
-    timestamp: str = Field(
-        ..., description="Horodatage de la prediction (ISO 8601)"
-    )
+    alerts: list[str] = Field(default_factory=list, description="Alertes declenchees")
+    model_used: str = Field(..., description="Modele utilise pour la prediction")
+    timestamp: str = Field(..., description="Horodatage de la prediction (ISO 8601)")
 
 
 class BatchInput(BaseModel):
     """Entree pour les predictions en batch."""
 
     machines: list[SensorInput] = Field(
-        ..., min_length=1, max_length=100,
-        description="Liste des machines (max 100)"
+        ..., min_length=1, max_length=100, description="Liste des machines (max 100)"
     )
 
 
@@ -286,17 +286,15 @@ class RULInput(BaseModel):
     """Entree pour la prediction RUL (Remaining Useful Life)."""
 
     temperature: float = Field(..., ge=-50, le=500)
-    vibration: float = Field(..., ge=0, le=100)
+    vibration: float = Field(..., ge=0, le=200)
     humidity: float = Field(..., ge=0, le=100)
-    pressure: float = Field(..., ge=0, le=2000)
+    pressure: float = Field(..., ge=0, le=20)
     energy_consumption: float = Field(..., ge=0)
-    predicted_remaining_life: float = Field(..., ge=0)
     temp_rolling_10min: Optional[float] = None
     temp_trend_1h: Optional[float] = None
     vibr_rolling_10min: Optional[float] = None
     temp_std_30min: Optional[float] = None
     energy_vibr_ratio: Optional[float] = None
-    downtime_risk: Optional[float] = None
     machine_id: Optional[str] = None
 
 
@@ -304,11 +302,15 @@ class RULResponse(BaseModel):
     """Reponse de prediction RUL."""
 
     machine_id: Optional[str] = None
-    rul_hours: float = Field(
-        ..., description="Temps restant estime avant panne (heures)"
+    rul_minutes: float = Field(
+        ..., description="Temps restant estime avant panne (minutes, 0-500)"
     )
     rul_category: str = Field(
-        ..., description="Categorie : 'urgent', 'soon', 'moderate', 'safe'"
+        ...,
+        description=(
+            "Categorie : 'urgent' (< 50 min), 'soon' (< 150 min), "
+            "'moderate' (< 300 min), 'safe'"
+        ),
     )
     confidence: float = Field(..., ge=0, le=1)
     model_used: str
@@ -319,17 +321,15 @@ class AnomalyInput(BaseModel):
     """Entree pour la detection d'anomalies."""
 
     temperature: float = Field(..., ge=-50, le=500)
-    vibration: float = Field(..., ge=0, le=100)
+    vibration: float = Field(..., ge=0, le=200)
     humidity: float = Field(..., ge=0, le=100)
-    pressure: float = Field(..., ge=0, le=2000)
+    pressure: float = Field(..., ge=0, le=20)
     energy_consumption: float = Field(..., ge=0)
-    predicted_remaining_life: float = Field(..., ge=0)
     temp_rolling_10min: Optional[float] = None
     temp_trend_1h: Optional[float] = None
     vibr_rolling_10min: Optional[float] = None
     temp_std_30min: Optional[float] = None
     energy_vibr_ratio: Optional[float] = None
-    downtime_risk: Optional[float] = None
     machine_id: Optional[str] = None
 
 
@@ -341,12 +341,9 @@ class AnomalyResponse(BaseModel):
     anomaly_score: float = Field(
         ..., description="Score d'anomalie (plus negatif = plus anormal)"
     )
-    severity: str = Field(
-        ..., description="Severite : 'normal', 'warning', 'critical'"
-    )
+    severity: str = Field(..., description="Severite : 'normal', 'warning', 'critical'")
     contributing_factors: list[str] = Field(
-        default_factory=list,
-        description="Facteurs contributifs a l'anomalie"
+        default_factory=list, description="Facteurs contributifs a l'anomalie"
     )
     model_used: str
     timestamp: str
@@ -356,24 +353,19 @@ class AlertConfigInput(BaseModel):
     """Schema de mise a jour des seuils d'alerte."""
 
     temperature_critical_celsius: Optional[float] = Field(
-        None, gt=0, le=1000,
-        description="Seuil critique temperature (Celsius)"
+        None, gt=0, le=1000, description="Seuil critique temperature (Celsius)"
     )
     rebuts_max_percent: Optional[float] = Field(
-        None, gt=0, le=100,
-        description="Taux de rebuts max (%)"
+        None, gt=0, le=100, description="Taux de rebuts max (%)"
     )
     trs_min_percent: Optional[float] = Field(
-        None, ge=0, le=100,
-        description="TRS minimum acceptable (%)"
+        None, ge=0, le=100, description="TRS minimum acceptable (%)"
     )
     cycle_deviation_max_percent: Optional[float] = Field(
-        None, gt=0, le=100,
-        description="Deviation cycle max (%)"
+        None, gt=0, le=100, description="Deviation cycle max (%)"
     )
     anomaly_rate_max_percent: Optional[float] = Field(
-        None, gt=0, le=100,
-        description="Taux d'anomalie max (%)"
+        None, gt=0, le=100, description="Taux d'anomalie max (%)"
     )
 
 
@@ -422,6 +414,7 @@ class MetricsResponse(BaseModel):
 # Compteurs API (metriques simples en memoire)
 # ==============================================================================
 
+
 class APIStats:
     """Compteurs de requetes pour les metriques."""
 
@@ -451,6 +444,7 @@ api_stats = APIStats()
 # Helpers -- logique de prediction
 # ==============================================================================
 
+
 def _extract_features(data: SensorInput | RULInput | AnomalyInput) -> np.ndarray:
     """Extrait le vecteur de features depuis un schema Pydantic."""
     values = []
@@ -470,8 +464,6 @@ def _extract_features(data: SensorInput | RULInput | AnomalyInput) -> np.ndarray
                 vibr = getattr(data, "vibration", 1.0)
                 energy = getattr(data, "energy_consumption", 0.0)
                 val = energy / vibr if vibr > 0 else 0.0
-            elif feat == "downtime_risk":
-                val = 0.5
             else:
                 val = 0.0
         values.append(float(val))
@@ -490,6 +482,15 @@ def _evaluate_alerts(data: SensorInput | RULInput | AnomalyInput) -> list[str]:
     return alerts
 
 
+def _decide(proba: np.ndarray) -> tuple[int, float]:
+    """Applique le seuil de decision PREDICTION_THRESHOLD a la probabilite
+    de maintenance et retourne (classe, confiance dans la classe retenue)."""
+    p_maint = float(proba[0, 1])
+    prediction = 1 if p_maint >= PREDICTION_THRESHOLD else 0
+    confidence = p_maint if prediction == 1 else 1.0 - p_maint
+    return prediction, round(confidence, 4)
+
+
 def _risk_level_from_confidence(confidence: float, prediction: int) -> str:
     """Determine le niveau de risque a partir de la prediction et de la confiance."""
     if prediction == 0:
@@ -505,13 +506,16 @@ def _risk_level_from_confidence(confidence: float, prediction: int) -> str:
     return "medium"
 
 
-def _rul_category(rul_hours: float) -> str:
-    """Classifie le RUL en categorie humaine."""
-    if rul_hours < 24:
+def _rul_category(rul_minutes: float) -> str:
+    """Classifie le RUL (minutes) en categorie humaine.
+
+    Seuils alignes sur le dashboard : RUL critique < 50 min, avertissement < 150 min.
+    """
+    if rul_minutes < 50:
         return "urgent"
-    if rul_hours < 72:
+    if rul_minutes < 150:
         return "soon"
-    if rul_hours < 168:
+    if rul_minutes < 300:
         return "moderate"
     return "safe"
 
@@ -531,11 +535,11 @@ def _mock_predict(features: np.ndarray) -> tuple[int, float]:
         risk_score += 0.4
     elif temp > alert_thresholds.temperature_critical * 0.8:
         risk_score += 0.2
-    if vibration > 5.0:
+    if vibration > VIBRATION_CRITICAL:
         risk_score += 0.3
-    elif vibration > 3.0:
+    elif vibration > VIBRATION_WARNING:
         risk_score += 0.1
-    if energy > 200:
+    if energy > ENERGY_HIGH:
         risk_score += 0.2
 
     risk_score = min(risk_score, 1.0)
@@ -548,16 +552,17 @@ def _mock_rul(features: np.ndarray) -> float:
     """Estimation RUL mock basee sur des heuristiques."""
     temp = features[0, 0]
     vibration = features[0, 1]
-    remaining = features[0, 5]
 
     # Plus la temperature et les vibrations sont elevees, moins il reste de temps
-    base_rul = remaining
+    base_rul = RUL_MAX_MINUTES
     if temp > alert_thresholds.temperature_critical:
         base_rul *= 0.3
     elif temp > alert_thresholds.temperature_critical * 0.8:
         base_rul *= 0.6
-    if vibration > 5.0:
+    if vibration > VIBRATION_CRITICAL:
         base_rul *= 0.5
+    elif vibration > VIBRATION_WARNING:
+        base_rul *= 0.7
     return max(round(base_rul, 2), 0.0)
 
 
@@ -569,7 +574,7 @@ def _mock_anomaly(features: np.ndarray) -> tuple[bool, float]:
     score = 0.0
     if temp > alert_thresholds.temperature_critical:
         score -= 0.5
-    if vibration > 5.0:
+    if vibration > VIBRATION_CRITICAL:
         score -= 0.3
     if temp < 10:
         score -= 0.2
@@ -592,13 +597,13 @@ def _contributing_factors(data: AnomalyInput) -> list[str]:
     factors: list[str] = []
     if data.temperature > alert_thresholds.temperature_critical:
         factors.append("Temperature anormalement elevee")
-    if data.vibration > 5.0:
+    if data.vibration > VIBRATION_CRITICAL:
         factors.append("Vibrations excessives")
-    if data.energy_consumption > 200:
+    if data.energy_consumption > ENERGY_HIGH:
         factors.append("Consommation energetique elevee")
     if data.humidity > 80:
         factors.append("Humidite elevee")
-    if data.pressure < 900 or data.pressure > 1100:
+    if data.pressure < PRESSURE_MIN or data.pressure > PRESSURE_MAX:
         factors.append("Pression hors plage normale")
     return factors
 
@@ -606,6 +611,7 @@ def _contributing_factors(data: AnomalyInput) -> list[str]:
 # ==============================================================================
 # Lifespan (startup / shutdown)
 # ==============================================================================
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -684,6 +690,7 @@ async def api_key_middleware(request: Request, call_next) -> Response:
 # Endpoints
 # ==============================================================================
 
+
 @app.get(
     "/health",
     response_model=HealthResponse,
@@ -709,6 +716,7 @@ async def health_check() -> HealthResponse:
 
 # ---------- Prediction unitaire ----------
 
+
 @app.post(
     "/predict",
     response_model=PredictionResponse,
@@ -729,13 +737,11 @@ async def predict(data: SensorInput) -> PredictionResponse:
 
         if models.classifier is not None:
             proba = models.classifier.predict_proba(features)
-            prediction = int(np.argmax(proba, axis=1)[0])
-            confidence = float(np.max(proba, axis=1)[0])
+            prediction, confidence = _decide(proba)
             model_name = "random_forest"
         elif models.xgboost is not None:
             proba = models.xgboost.predict_proba(features)
-            prediction = int(np.argmax(proba, axis=1)[0])
-            confidence = float(np.max(proba, axis=1)[0])
+            prediction, confidence = _decide(proba)
             model_name = "xgboost"
         else:
             prediction, confidence = _mock_predict(features)
@@ -773,6 +779,7 @@ async def predict(data: SensorInput) -> PredictionResponse:
 
 # ---------- Prediction batch ----------
 
+
 @app.post(
     "/predict/batch",
     response_model=BatchResponse,
@@ -806,6 +813,7 @@ async def predict_batch(data: BatchInput) -> BatchResponse:
 
 # ---------- Prediction RUL ----------
 
+
 @app.post(
     "/predict/rul",
     response_model=RULResponse,
@@ -813,7 +821,7 @@ async def predict_batch(data: BatchInput) -> BatchResponse:
     summary="Prediction du temps restant avant panne (RUL)",
 )
 async def predict_rul(data: RULInput) -> RULResponse:
-    """Estime le Remaining Useful Life (RUL) d'une machine en heures.
+    """Estime le Remaining Useful Life (RUL) d'une machine en minutes.
 
     Utilise le modele RF Regressor entraine pour la regression RUL.
     """
@@ -822,10 +830,7 @@ async def predict_rul(data: RULInput) -> RULResponse:
         model_name = "fallback_heuristic"
 
         if models.rul_regressor is not None:
-            # Le RUL regressor est entraine SANS predicted_remaining_life
-            # (ce serait circulaire de l'inclure comme feature)
-            rul_feature_idx = ML_FEATURE_NAMES.index("predicted_remaining_life")
-            rul_features = np.delete(features, rul_feature_idx, axis=1)
+            rul_features = features
             rul_value = float(models.rul_regressor.predict(rul_features)[0])
             rul_value = max(rul_value, 0.0)
             model_name = "rf_regressor_rul"
@@ -849,7 +854,7 @@ async def predict_rul(data: RULInput) -> RULResponse:
         api_stats.total_rul_predictions += 1
 
         logger.info(
-            "RUL prediction : machine=%s rul=%.1fh category=%s model=%s",
+            "RUL prediction : machine=%s rul=%.0fmin category=%s model=%s",
             data.machine_id or "N/A",
             rul_value,
             category,
@@ -858,7 +863,7 @@ async def predict_rul(data: RULInput) -> RULResponse:
 
         return RULResponse(
             machine_id=data.machine_id,
-            rul_hours=rul_value,
+            rul_minutes=rul_value,
             rul_category=category,
             confidence=round(confidence, 4),
             model_used=model_name,
@@ -875,6 +880,7 @@ async def predict_rul(data: RULInput) -> RULResponse:
 
 
 # ---------- Detection d'anomalies ----------
+
 
 @app.post(
     "/anomaly",
@@ -936,6 +942,25 @@ async def detect_anomaly(data: AnomalyInput) -> AnomalyResponse:
 
 # ---------- Metriques ----------
 
+
+def _load_training_metrics() -> dict[str, Any]:
+    """Charge les metriques produites par l'entrainement (si disponibles)."""
+    import json
+
+    candidates = [
+        MODEL_DIR.parent / "evaluation" / "results" / "all_models_metrics.json",
+        Path("models/evaluation/results/all_models_metrics.json"),
+    ]
+    for path in candidates:
+        try:
+            if path.exists():
+                with open(path, encoding="utf-8") as f:
+                    return json.load(f).get("models", {})
+        except (OSError, ValueError) as exc:
+            logger.warning("Metriques d'entrainement illisibles (%s) : %s", path, exc)
+    return {}
+
+
 @app.get(
     "/metrics",
     response_model=MetricsResponse,
@@ -945,11 +970,14 @@ async def detect_anomaly(data: AnomalyInput) -> AnomalyResponse:
 async def get_metrics() -> MetricsResponse:
     """Retourne les metriques de performance des modeles et les statistiques API.
 
-    Les metriques des modeles sont des valeurs de reference issues de l'entrainement
-    (MSPR 1 et objectifs MSPR 2).
+    Les metriques mesurees sont lues dans models/evaluation/results/
+    all_models_metrics.json (produit par train_models.py). Les valeurs de
+    reference (MSPR 1, objectifs MSPR 2) sont conservees pour comparaison.
     """
+    trained = _load_training_metrics()
     model_metrics = {
         "random_forest": {
+            "trained_metrics": trained.get("random_forest"),
             "type": "classification",
             "status": "loaded" if models.classifier is not None else "not_loaded",
             "reference_metrics": {
@@ -961,6 +989,7 @@ async def get_metrics() -> MetricsResponse:
             },
         },
         "xgboost": {
+            "trained_metrics": trained.get("xgboost"),
             "type": "classification",
             "status": "loaded" if models.xgboost is not None else "not_loaded",
             "reference_metrics": {
@@ -968,6 +997,7 @@ async def get_metrics() -> MetricsResponse:
             },
         },
         "isolation_forest": {
+            "trained_metrics": trained.get("isolation_forest"),
             "type": "anomaly_detection",
             "status": "loaded" if models.isolation_forest is not None else "not_loaded",
             "reference_metrics": {
@@ -976,6 +1006,7 @@ async def get_metrics() -> MetricsResponse:
             },
         },
         "rf_regressor_rul": {
+            "trained_metrics": trained.get("rf_regressor_rul"),
             "type": "regression",
             "status": "loaded" if models.rul_regressor is not None else "not_loaded",
             "reference_metrics": {
@@ -993,6 +1024,7 @@ async def get_metrics() -> MetricsResponse:
 
 # ---------- Model Info (model card resumee) ----------
 
+
 @app.get(
     "/model-info",
     response_model=ModelInfoResponse,
@@ -1008,7 +1040,7 @@ async def get_model_info() -> ModelInfoResponse:
     model_cards = [
         {
             "name": "Random Forest Classifier",
-            "file": "random_forest.joblib",
+            "file": MODEL_FILES["classifier"],
             "loaded": models.classifier is not None,
             "role": "Classification de l'etat de maintenance (normal / a risque)",
             "algorithm": "Random Forest (scikit-learn)",
@@ -1024,7 +1056,7 @@ async def get_model_info() -> ModelInfoResponse:
         },
         {
             "name": "XGBoost Classifier",
-            "file": "xgboost_model.joblib",
+            "file": MODEL_FILES["xgboost"],
             "loaded": models.xgboost is not None,
             "role": "Classification de maintenance (modele complementaire)",
             "algorithm": "XGBoost (gradient boosting)",
@@ -1039,7 +1071,7 @@ async def get_model_info() -> ModelInfoResponse:
         },
         {
             "name": "Isolation Forest",
-            "file": "isolation_forest.joblib",
+            "file": MODEL_FILES["isolation_forest"],
             "loaded": models.isolation_forest is not None,
             "role": "Detection de comportements atypiques des capteurs",
             "algorithm": "Isolation Forest (scikit-learn)",
@@ -1055,13 +1087,13 @@ async def get_model_info() -> ModelInfoResponse:
         },
         {
             "name": "RF Regressor RUL",
-            "file": "rf_regressor_rul.joblib",
+            "file": MODEL_FILES["rul_regressor"],
             "loaded": models.rul_regressor is not None,
             "role": "Estimation du temps restant avant defaillance (RUL)",
             "algorithm": "Random Forest Regressor (scikit-learn)",
             "training_data": "Donnees capteurs avec etiquettes RUL",
             "input_features": ML_FEATURE_NAMES,
-            "output": "Valeur continue (heures restantes)",
+            "output": "Valeur continue (minutes restantes, 0-500)",
             "limitations": [
                 "Objectif MAE < 50 minutes",
                 "Precision depend de la qualite des etiquettes RUL",
@@ -1086,6 +1118,7 @@ async def get_model_info() -> ModelInfoResponse:
 
 
 # ---------- Configuration des alertes ----------
+
 
 @app.get(
     "/alerts/config",

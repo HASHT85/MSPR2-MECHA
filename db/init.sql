@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS mecha_predictions (
     model_used VARCHAR(30) NOT NULL,
     prediction INTEGER,
     confidence FLOAT,
-    rul_hours FLOAT,
+    rul_minutes FLOAT,
     is_anomaly BOOLEAN DEFAULT FALSE,
     features_json JSONB
 );

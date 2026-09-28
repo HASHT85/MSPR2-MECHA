@@ -48,30 +48,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint
 
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_DB: mecha_db_test
-          POSTGRES_USER: mecha_user
-          POSTGRES_PASSWORD: test_password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U mecha_user -d mecha_db_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     env:
-      POSTGRES_HOST: localhost
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: mecha_db_test
-      POSTGRES_USER: mecha_user
-      POSTGRES_PASSWORD: test_password
       MODEL_PATH: models/saved_models
       DEFAULT_MODEL: random_forest
-      PREDICTION_THRESHOLD: "0.3"
+      PREDICTION_THRESHOLD: "0.5"
 
     steps:
       - name: Checkout du code
@@ -87,6 +67,32 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      # ------------------------------------------------------------------
+      # Reproductibilité de bout en bout ("test décisif") :
+      # les données et les modèles ne sont pas versionnés (fichiers lourds),
+      # ils sont régénérés à chaque exécution depuis les scripts du dépôt.
+      # Les tests modèles / qualité données s'exécutent donc réellement en CI.
+      # ------------------------------------------------------------------
+      - name: Régénérer le jeu de données (simulation + fusion AI4I)
+        run: |
+          python data/scripts/generate_data.py
+          python data/scripts/merge_datasets.py
+
+      - name: Entraîner les modèles
+        run: python models/training/train_models.py
+
+      - name: Vérifier que l'API charge les modèles (pas de mode mock)
+        run: |
+          python - <<'EOF'
+          from fastapi.testclient import TestClient
+          from api.main import app, models
+          with TestClient(app) as client:
+              health = client.get("/health").json()
+              print(health["models_available"])
+              assert health["models_loaded"], models.load_errors
+              assert all(health["models_available"].values()), models.load_errors
+          EOF
 
       - name: Lancer les tests avec couverture
         run: |
@@ -106,6 +112,15 @@ jobs:
           path: |
             coverage.xml
             htmlcov/
+          retention-days: 14
+
+      - name: Publier les modèles et métriques entraînés
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-models
+          path: |
+            models/saved_models/*.joblib
+            models/evaluation/results/*.json
           retention-days: 14
 
   # --------------------------------------------------------------------------

@@ -1,0 +1,15 @@
+# ==============================================================================
+# MSPR 2 MECHA -- Configuration Ruff (lint + format)
+# Fige le jeu de regles pour que la CI soit deterministe quelle que soit
+# la version de Ruff installee.
+# ==============================================================================
+target-version = "py311"
+line-length = 88
+exclude = [".git", ".venv", "venv", "htmlcov", "test-results", "node_modules", "docs", "*.md"]
+
+[lint]
+# E4/E7/E9 : erreurs pyflakes/pycodestyle essentielles, F : pyflakes, I : tri des imports
+select = ["E4", "E7", "E9", "F", "I"]
+
+[lint.isort]
+known-first-party = ["api", "app", "models", "data", "tests"]

@@ -91,14 +91,16 @@ Chaque machine dispose d'un **score de santé** mis à jour en continu :
 
 Le **RUL** (Remaining Useful Life, ou « durée de vie résiduelle ») est une estimation du temps restant avant qu'une panne ne se produise si aucune intervention n'est réalisée.
 
-> 💡 **Exemple concret** : Si le RUL d'une machine affiche « 72 heures », cela signifie que selon les données des capteurs, la machine pourrait tomber en panne dans environ 3 jours. C'est le moment idéal pour planifier une intervention sans impacter la production.
+> 💡 **Exemple concret** : Si le RUL d'une machine affiche « 120 min », cela signifie que selon les données des capteurs, la machine pourrait tomber en panne dans environ deux heures de production. C'est le moment de planifier une intervention à la prochaine pause, sans arrêter la ligne en urgence.
 
-| RUL affiché | Interprétation | Recommandation |
-|-------------|----------------|----------------|
-| **> 7 jours** | Pas d'urgence | Intégrer dans la planification standard |
-| **3 à 7 jours** | Attention requise | Planifier une intervention cette semaine |
-| **1 à 3 jours** | Urgence modérée | Intervention dans les 24-48h |
-| **< 24 heures** | Urgence élevée | Intervention immédiate recommandée |
+> ℹ️ Dans cette version, le RUL est exprimé en **minutes de fonctionnement** sur une échelle de 0 à 500 min (horizon de la simulation). Il est recalculé à chaque nouvelle mesure.
+
+| RUL affiché | Catégorie | Interprétation | Recommandation |
+|-------------|-----------|----------------|----------------|
+| **≥ 300 min** | safe | Pas d'urgence | Intégrer dans la planification standard |
+| **150 à 300 min** | moderate | Attention requise | Planifier une intervention dans la journée |
+| **50 à 150 min** | soon | Urgence modérée | Intervention à la prochaine pause de production |
+| **< 50 min** | urgent | Urgence élevée | Intervention immédiate recommandée |
 
 ### Le niveau de confiance
 

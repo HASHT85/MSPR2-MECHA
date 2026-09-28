@@ -70,7 +70,7 @@
 |---------|------|-------------|---------|-------|
 | `machine_status` | int | État opérationnel | 0=Arrêt, 1=Fonct, 2=Panne | **NE PAS UTILISER comme feature ML** |
 | `anomaly_flag` | int (0/1) | Signal d'anomalie | 0=Normal, 1=Anomalie | Seuils temp/vibr/dégradation |
-| `predicted_remaining_life` | int | Durée de vie résiduelle (RUL) | 0 – 500 min | **Corrélation très forte** |
+| `predicted_remaining_life` | int | Durée de vie résiduelle (RUL) | 0 – 500 min | **Cible du modèle RUL — NE PAS UTILISER comme feature** (RUL = 500×(1−dégradation) ; « RUL < 200 » reproduit la cible à 99 %) |
 | `failure_type` | string | Type de panne | Normal, Overheating, Vibration_Issue, etc. | Catégoriel |
 | `maintenance_required` | int (0/1) | **Variable cible ML** | 0=Non, 1=Oui | Déséquilibre ~90/10 (après fusion) |
 | `maintenance_type` | string | Type de maintenance | none, preventive, corrective, recommended | Enrichissement MSPR 2 |
@@ -89,7 +89,7 @@
 
 | Colonne | Type | Description | Formule | Plage |
 |---------|------|-------------|---------|-------|
-| `downtime_risk` | float | Score composite de risque d'arrêt | 0.3×temp_risk + 0.25×vibr_risk + 0.45×rul_risk | 0.0 – 1.0 |
+| `downtime_risk` | float | Score composite de risque d'arrêt — **indicateur d'affichage, NE PAS UTILISER comme feature** (dérivé à 45 % du RUL) | 0.3×temp_risk + 0.25×vibr_risk + 0.45×rul_risk | 0.0 – 1.0 |
 
 ## Mapping des types de pannes
 
@@ -186,7 +186,7 @@
 
 | Colonne | Type | Description | Formule | Plage |
 |---------|------|-------------|---------|-------|
-| `downtime_risk` | float | Score composite de risque d'arrêt | 0.3×temp_risk + 0.25×vibr_risk + 0.45×rul_risk | 0.0 – 1.0 |
+| `downtime_risk` | float | Score composite de risque d'arrêt — **indicateur d'affichage, NE PAS UTILISER comme feature** (dérivé à 45 % du RUL) | 0.3×temp_risk + 0.25×vibr_risk + 0.45×rul_risk | 0.0 – 1.0 |
 
 ## Usines MECHA
 

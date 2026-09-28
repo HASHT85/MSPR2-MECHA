@@ -6,7 +6,7 @@ MECHA - Script d'entrainement des modeles de maintenance predictive
 
 Projet : MSPR 2, Bloc 4, EPSI RNCP35584
 Entreprise : MECHA (fabrication de pieces mecaniques haute precision)
-Dataset : ~100k lignes, capteurs IoT (temperature, vibration, humidity, pressure, energy, RUL)
+Dataset : 110k lignes (100k simulees + 10k AI4I 2020), capteurs IoT
 
 Modeles entraines :
     1. Random Forest Classifier - modele principal (classification maintenance)
@@ -16,8 +16,9 @@ Modeles entraines :
     5. Random Forest Regressor - prediction RUL (Remaining Useful Life)
 
 REGLES ML APPLIQUEES :
-    - machine_status EXCLUE des features (DATA LEAKAGE confirme MSPR 1)
-    - Split TEMPOREL 80/20 (trie par timestamp, pas aleatoire)
+    - machine_status, predicted_remaining_life et downtime_risk EXCLUES des
+      features (DATA LEAKAGE : voir LEAKY_FEATURES)
+    - Split TEMPOREL 80/20 par source de donnees (trie par timestamp, pas aleatoire)
     - Desequilibre gere : class_weight='balanced', scale_pos_weight
     - Metriques documentees : Accuracy, Precision, Recall, F1, AUC-ROC
 
@@ -25,36 +26,38 @@ Auteur : Equipe MECHA
 Date : 2026-05-30
 """
 
-import os
-import sys
 import json
 import time
 import warnings
 from datetime import datetime
 from pathlib import Path
 
+import joblib
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, IsolationForest
+from sklearn.ensemble import (
+    IsolationForest,
+    RandomForestClassifier,
+    RandomForestRegressor,
+)
 from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
     accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-    classification_report,
     confusion_matrix,
+    f1_score,
     mean_absolute_error,
     mean_squared_error,
+    precision_score,
     r2_score,
+    recall_score,
+    roc_auc_score,
 )
-import joblib
+from sklearn.preprocessing import StandardScaler
 
 # Optionnel : XGBoost
 try:
     from xgboost import XGBClassifier
+
     XGBOOST_AVAILABLE = True
 except ImportError:
     XGBOOST_AVAILABLE = False
@@ -74,40 +77,51 @@ MODELS_DIR = PROJECT_ROOT / "models" / "saved_models"
 EVAL_DIR = PROJECT_ROOT / "models" / "evaluation"
 RESULTS_DIR = EVAL_DIR / "results"
 
-# Features ML (machine_status EXCLUE - DATA LEAKAGE)
-FEATURES_CLASSIFICATION = [
+# Features ML : uniquement des mesures capteurs et leurs derivees temporelles.
+#
+# Variables EXCLUES (data leakage) :
+#   - machine_status            : encode directement l'etat panne (MSPR 1)
+#   - predicted_remaining_life  : dans la simulation, RUL = 500 x (1 - degradation) et
+#                                 maintenance_required = 1 des que degradation > 0.6 ;
+#                                 la regle "RUL < 200" reproduit la cible a 99 %.
+#                                 C'est aussi la cible du modele RUL.
+#   - downtime_risk             : score composite construit a 45 % a partir du RUL.
+LEAKY_FEATURES = ["machine_status", "predicted_remaining_life", "downtime_risk"]
+
+FEATURES = [
     "temperature",
     "vibration",
     "humidity",
     "pressure",
     "energy_consumption",
-    "predicted_remaining_life",
     "temp_rolling_10min",
     "temp_trend_1h",
     "vibr_rolling_10min",
     "temp_std_30min",
     "energy_vibr_ratio",
-    "downtime_risk",
 ]
+
+# Les deux taches (classification et regression RUL) utilisent les memes
+# 10 features capteurs. L'API (api/main.py, ML_FEATURE_NAMES) doit rester alignee.
+FEATURES_CLASSIFICATION = FEATURES
+FEATURES_RUL = FEATURES
 
 # Variable cible classification
 TARGET_CLASSIFICATION = "maintenance_required"
 
-# Variable cible regression (RUL)
+# Variable cible regression (RUL, en minutes)
 TARGET_RUL = "predicted_remaining_life"
-FEATURES_RUL = [
-    "temperature",
-    "vibration",
-    "humidity",
-    "pressure",
-    "energy_consumption",
-    "temp_rolling_10min",
-    "temp_trend_1h",
-    "vibr_rolling_10min",
-    "temp_std_30min",
-    "energy_vibr_ratio",
-    "downtime_risk",
-]
+
+# Noms de fichiers des modeles sauvegardes (sans extension).
+# ATTENTION : ces noms doivent rester identiques a MODEL_FILES dans api/main.py
+# (un test automatique verifie cette coherence : tests/test_model.py).
+MODEL_FILENAMES = {
+    "classifier": "random_forest_classifier",
+    "xgboost": "xgboost_classifier",
+    "logistic_regression": "logistic_regression",
+    "isolation_forest": "isolation_forest",
+    "rul_regressor": "rf_regressor_rul",
+}
 
 # Split temporel
 TRAIN_RATIO = 0.80
@@ -139,6 +153,7 @@ def print_subheader(title):
 # 1. CHARGEMENT ET PREPARATION DES DONNEES
 # =============================================================================
 
+
 def load_dataset(filepath):
     """
     Charge le dataset MECHA depuis un fichier CSV.
@@ -168,32 +183,41 @@ def load_dataset(filepath):
     if missing:
         raise ValueError(f"Colonnes manquantes : {missing}")
 
-    print(f"  [OK] Toutes les colonnes requises sont presentes")
+    print("  [OK] Toutes les colonnes requises sont presentes")
 
     # Verification DATA LEAKAGE
-    if "machine_status" in FEATURES_CLASSIFICATION:
+    leaks = [f for f in LEAKY_FEATURES if f in FEATURES_CLASSIFICATION + FEATURES_RUL]
+    if leaks:
         raise ValueError(
-            "ERREUR CRITIQUE : machine_status dans les features ! "
-            "DATA LEAKAGE detecte. Retirer cette variable."
+            f"ERREUR CRITIQUE : {leaks} dans les features ! "
+            "DATA LEAKAGE detecte. Retirer ces variables."
         )
-    print(f"  [OK] machine_status EXCLUE des features (anti data leakage)")
+    print(
+        f"  [OK] Variables exclues des features (anti data leakage) : {LEAKY_FEATURES}"
+    )
 
     # Distribution de la cible
     target_dist = df[TARGET_CLASSIFICATION].value_counts(normalize=True)
     print(f"\n  Distribution de '{TARGET_CLASSIFICATION}' :")
     for val, pct in target_dist.items():
         label = "POSITIF (maintenance)" if val == 1 else "NEGATIF (pas de maintenance)"
-        print(f"    - {label} : {pct*100:.1f}%")
+        print(f"    - {label} : {pct * 100:.1f}%")
 
     return df
 
 
 def prepare_temporal_split(df):
     """
-    Prepare un split temporel 80/20 (PAS aleatoire).
+    Prepare un split temporel 80/20 (PAS aleatoire), PAR SOURCE de donnees.
 
     Le split temporel est essentiel pour eviter le data leakage temporel :
     on entraine sur le passe et on teste sur le futur.
+
+    Le split est fait separement pour chaque valeur de `data_source`
+    (MECHA_simulated, AI4I_2020_real). Les deux sources couvrent des periodes
+    disjointes (janvier 2025 pour la simulation, mars-avril 2025 pour AI4I) :
+    un split temporel global mettrait 100 % des donnees reelles AI4I dans le
+    jeu de test, et le modele ne les verrait jamais a l'entrainement.
 
     Args:
         df (pd.DataFrame): Dataset complet.
@@ -201,25 +225,35 @@ def prepare_temporal_split(df):
     Returns:
         tuple: (X_train, X_test, y_train, y_test, df_train, df_test)
     """
-    print_header("2. SPLIT TEMPOREL 80/20")
+    print_header("2. SPLIT TEMPOREL 80/20 (PAR SOURCE)")
 
     # Conversion timestamp
     df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-    # Tri par timestamp
-    df = df.sort_values("timestamp").reset_index(drop=True)
-    print(f"  [OK] Donnees triees par timestamp")
+    if "data_source" not in df.columns:
+        df["data_source"] = "unknown"
+
+    train_parts, test_parts = [], []
+    for source, group in df.groupby("data_source", sort=False):
+        group = group.sort_values("timestamp")
+        split_idx = int(len(group) * TRAIN_RATIO)
+        train_parts.append(group.iloc[:split_idx])
+        test_parts.append(group.iloc[split_idx:])
+        print(
+            f"  [OK] {source:20s} : {len(group):>7,} lignes, "
+            f"coupure au {group['timestamp'].iloc[split_idx - 1]} "
+            f"(train={split_idx:,} / test={len(group) - split_idx:,})"
+        )
+
+    df_train = pd.concat(train_parts).sort_values("timestamp").reset_index(drop=True)
+    df_test = pd.concat(test_parts).sort_values("timestamp").reset_index(drop=True)
     print(f"  [OK] Periode : {df['timestamp'].min()} -> {df['timestamp'].max()}")
-
-    # Split temporel
-    split_idx = int(len(df) * TRAIN_RATIO)
-    df_train = df.iloc[:split_idx].copy()
-    df_test = df.iloc[split_idx:].copy()
-
-    split_date = df_train["timestamp"].max()
-    print(f"  [OK] Point de coupure : {split_date}")
-    print(f"  [OK] Train : {len(df_train):,} lignes ({len(df_train)/len(df)*100:.1f}%)")
-    print(f"  [OK] Test  : {len(df_test):,} lignes ({len(df_test)/len(df)*100:.1f}%)")
+    print(
+        f"  [OK] Train : {len(df_train):,} lignes ({len(df_train) / len(df) * 100:.1f}%)"
+    )
+    print(
+        f"  [OK] Test  : {len(df_test):,} lignes ({len(df_test) / len(df) * 100:.1f}%)"
+    )
 
     # Preparation X, y pour classification
     X_train = df_train[FEATURES_CLASSIFICATION].copy()
@@ -231,10 +265,12 @@ def prepare_temporal_split(df):
     n_missing_train = X_train.isnull().sum().sum()
     n_missing_test = X_test.isnull().sum().sum()
     if n_missing_train > 0 or n_missing_test > 0:
-        print(f"  [WARN] Valeurs manquantes detectees : train={n_missing_train}, test={n_missing_test}")
+        print(
+            f"  [WARN] Valeurs manquantes detectees : train={n_missing_train}, test={n_missing_test}"
+        )
         X_train = X_train.fillna(X_train.median())
         X_test = X_test.fillna(X_train.median())  # Utiliser la mediane du train
-        print(f"  [OK] Valeurs manquantes imputees (mediane)")
+        print("  [OK] Valeurs manquantes imputees (mediane)")
 
     # Gestion valeurs infinies
     X_train = X_train.replace([np.inf, -np.inf], np.nan).fillna(X_train.median())
@@ -243,7 +279,7 @@ def prepare_temporal_split(df):
     # Distribution dans train/test
     train_pos_rate = y_train.mean() * 100
     test_pos_rate = y_test.mean() * 100
-    print(f"\n  Distribution cible :")
+    print("\n  Distribution cible :")
     print(f"    Train : {train_pos_rate:.2f}% positifs")
     print(f"    Test  : {test_pos_rate:.2f}% positifs")
 
@@ -253,6 +289,7 @@ def prepare_temporal_split(df):
 # =============================================================================
 # 2. ENTRAINEMENT DES MODELES
 # =============================================================================
+
 
 def train_random_forest(X_train, y_train):
     """
@@ -287,13 +324,15 @@ def train_random_forest(X_train, y_train):
     elapsed = time.time() - start
 
     print(f"  [OK] Modele entraine en {elapsed:.2f}s")
-    print(f"  [OK] Hyperparametres : n_estimators=200, max_depth=15, class_weight='balanced'")
+    print(
+        "  [OK] Hyperparametres : n_estimators=200, max_depth=15, class_weight='balanced'"
+    )
     print(f"  [OK] Nombre d'arbres : {model.n_estimators}")
 
     # Feature importances
     importances = pd.Series(model.feature_importances_, index=FEATURES_CLASSIFICATION)
     importances = importances.sort_values(ascending=False)
-    print(f"\n  Top 5 features (importance) :")
+    print("\n  Top 5 features (importance) :")
     for feat, imp in importances.head(5).items():
         bar = "#" * int(imp * 50)
         print(f"    {feat:30s} : {imp:.4f} {bar}")
@@ -325,7 +364,9 @@ def train_xgboost(X_train, y_train):
     n_neg = (y_train == 0).sum()
     n_pos = (y_train == 1).sum()
     scale_pos_weight = n_neg / n_pos
-    print(f"  [OK] scale_pos_weight = {scale_pos_weight:.2f} (negatifs/positifs = {n_neg}/{n_pos})")
+    print(
+        f"  [OK] scale_pos_weight = {scale_pos_weight:.2f} (negatifs/positifs = {n_neg}/{n_pos})"
+    )
 
     model = XGBClassifier(
         n_estimators=200,
@@ -347,12 +388,12 @@ def train_xgboost(X_train, y_train):
     elapsed = time.time() - start
 
     print(f"  [OK] Modele entraine en {elapsed:.2f}s")
-    print(f"  [OK] Hyperparametres : n_estimators=200, max_depth=8, lr=0.1")
+    print("  [OK] Hyperparametres : n_estimators=200, max_depth=8, lr=0.1")
 
     # Feature importances
     importances = pd.Series(model.feature_importances_, index=FEATURES_CLASSIFICATION)
     importances = importances.sort_values(ascending=False)
-    print(f"\n  Top 5 features (importance) :")
+    print("\n  Top 5 features (importance) :")
     for feat, imp in importances.head(5).items():
         bar = "#" * int(imp * 50)
         print(f"    {feat:30s} : {imp:.4f} {bar}")
@@ -393,12 +434,12 @@ def train_logistic_regression(X_train, y_train):
     elapsed = time.time() - start
 
     print(f"  [OK] Modele entraine en {elapsed:.2f}s")
-    print(f"  [OK] Hyperparametres : C=1.0, class_weight='balanced', solver='lbfgs'")
+    print("  [OK] Hyperparametres : C=1.0, class_weight='balanced', solver='lbfgs'")
 
     # Coefficients
     coefs = pd.Series(np.abs(model.coef_[0]), index=FEATURES_CLASSIFICATION)
     coefs = coefs.sort_values(ascending=False)
-    print(f"\n  Top 5 features (|coefficient|) :")
+    print("\n  Top 5 features (|coefficient|) :")
     for feat, coef in coefs.head(5).items():
         bar = "#" * int(coef * 5)
         print(f"    {feat:30s} : {coef:.4f} {bar}")
@@ -434,8 +475,8 @@ def train_isolation_forest(X_train):
     elapsed = time.time() - start
 
     print(f"  [OK] Modele entraine en {elapsed:.2f}s")
-    print(f"  [OK] Hyperparametres : n_estimators=200, contamination=0.05")
-    print(f"  [OK] Modele NON supervise (pas de variable cible)")
+    print("  [OK] Hyperparametres : n_estimators=200, contamination=0.05")
+    print("  [OK] Modele NON supervise (pas de variable cible)")
 
     return model
 
@@ -471,12 +512,12 @@ def train_rf_regressor_rul(X_train_rul, y_train_rul):
     elapsed = time.time() - start
 
     print(f"  [OK] Modele entraine en {elapsed:.2f}s")
-    print(f"  [OK] Hyperparametres : n_estimators=200, max_depth=15")
+    print("  [OK] Hyperparametres : n_estimators=200, max_depth=15")
 
     # Feature importances
     importances = pd.Series(model.feature_importances_, index=FEATURES_RUL)
     importances = importances.sort_values(ascending=False)
-    print(f"\n  Top 5 features (importance) :")
+    print("\n  Top 5 features (importance) :")
     for feat, imp in importances.head(5).items():
         bar = "#" * int(imp * 50)
         print(f"    {feat:30s} : {imp:.4f} {bar}")
@@ -487,6 +528,7 @@ def train_rf_regressor_rul(X_train_rul, y_train_rul):
 # =============================================================================
 # 3. EVALUATION DES MODELES
 # =============================================================================
+
 
 def evaluate_classifier(model, X_test, y_test, model_name, scaler=None):
     """
@@ -538,6 +580,36 @@ def evaluate_classifier(model, X_test, y_test, model_name, scaler=None):
     }
 
     return metrics
+
+
+def evaluate_per_source(model, X_test, y_test, df_test, scaler=None):
+    """
+    Ventile les metriques de classification par source de donnees
+    (MECHA_simulated vs AI4I_2020_real).
+
+    Indispensable pour verifier que le modele ne performe pas uniquement
+    sur les donnees simulees : un score global peut masquer un modele nul
+    sur les donnees reelles.
+
+    Returns:
+        dict: {source: {n, n_positive, precision, recall, f1_score}}
+    """
+    if "data_source" not in df_test.columns:
+        return {}
+    X_eval = scaler.transform(X_test) if scaler is not None else X_test
+    y_pred = pd.Series(model.predict(X_eval), index=y_test.index)
+    result = {}
+    for source in df_test["data_source"].unique():
+        mask = (df_test["data_source"] == source).values
+        y_s, p_s = y_test[mask], y_pred[mask]
+        result[str(source)] = {
+            "n": int(mask.sum()),
+            "n_positive": int(y_s.sum()),
+            "precision": float(precision_score(y_s, p_s, zero_division=0)),
+            "recall": float(recall_score(y_s, p_s, zero_division=0)),
+            "f1_score": float(f1_score(y_s, p_s, zero_division=0)),
+        }
+    return result
 
 
 def evaluate_isolation_forest(model, X_test, y_test):
@@ -620,21 +692,41 @@ def print_classification_results(metrics):
     """Affiche les resultats d'un modele de classification en ASCII pur."""
     name = metrics["model_name"]
     print(f"\n  [{name}]")
-    print(f"    Accuracy  : {metrics['accuracy']:.4f}  ({metrics['accuracy']*100:.2f}%)")
-    print(f"    Precision : {metrics['precision']:.4f}  ({metrics['precision']*100:.2f}%)")
-    print(f"    Recall    : {metrics['recall']:.4f}  ({metrics['recall']*100:.2f}%)")
-    print(f"    F1-Score  : {metrics['f1_score']:.4f}  ({metrics['f1_score']*100:.2f}%)")
+    print(
+        f"    Accuracy  : {metrics['accuracy']:.4f}  ({metrics['accuracy'] * 100:.2f}%)"
+    )
+    print(
+        f"    Precision : {metrics['precision']:.4f}  ({metrics['precision'] * 100:.2f}%)"
+    )
+    print(f"    Recall    : {metrics['recall']:.4f}  ({metrics['recall'] * 100:.2f}%)")
+    print(
+        f"    F1-Score  : {metrics['f1_score']:.4f}  ({metrics['f1_score'] * 100:.2f}%)"
+    )
     if metrics.get("auc_roc") is not None:
-        print(f"    AUC-ROC   : {metrics['auc_roc']:.4f}  ({metrics['auc_roc']*100:.2f}%)")
+        print(
+            f"    AUC-ROC   : {metrics['auc_roc']:.4f}  ({metrics['auc_roc'] * 100:.2f}%)"
+        )
     else:
-        print(f"    AUC-ROC   : N/A")
+        print("    AUC-ROC   : N/A")
 
     if "confusion_matrix" in metrics:
         cm = metrics["confusion_matrix"]
-        print(f"\n    Matrice de confusion :")
-        print(f"                   Pred=0    Pred=1")
-        print(f"      Reel=0      {cm['true_negatives']:>7}   {cm['false_positives']:>7}")
-        print(f"      Reel=1      {cm['false_negatives']:>7}   {cm['true_positives']:>7}")
+        print("\n    Matrice de confusion :")
+        print("                   Pred=0    Pred=1")
+        print(
+            f"      Reel=0      {cm['true_negatives']:>7}   {cm['false_positives']:>7}"
+        )
+        print(
+            f"      Reel=1      {cm['false_negatives']:>7}   {cm['true_positives']:>7}"
+        )
+
+    if metrics.get("per_source"):
+        print("\n    Par source de donnees :")
+        for source, m in metrics["per_source"].items():
+            print(
+                f"      {source:18s} n={m['n']:>6}  pos={m['n_positive']:>4}  "
+                f"P={m['precision']:.3f}  R={m['recall']:.3f}  F1={m['f1_score']:.3f}"
+            )
 
 
 def print_rul_results(metrics):
@@ -643,15 +735,22 @@ def print_rul_results(metrics):
     print(f"\n  [{name}]")
     print(f"    MAE       : {metrics['mae']:.4f}")
     print(f"    RMSE      : {metrics['rmse']:.4f}")
-    print(f"    R2 Score  : {metrics['r2_score']:.4f}  ({metrics['r2_score']*100:.2f}%)")
+    print(
+        f"    R2 Score  : {metrics['r2_score']:.4f}  ({metrics['r2_score'] * 100:.2f}%)"
+    )
     print(f"    MSE       : {metrics['mse']:.4f}")
-    print(f"    Y_test    : mean={metrics['y_test_mean']:.2f}, std={metrics['y_test_std']:.2f}")
-    print(f"    Y_pred    : mean={metrics['y_pred_mean']:.2f}, std={metrics['y_pred_std']:.2f}")
+    print(
+        f"    Y_test    : mean={metrics['y_test_mean']:.2f}, std={metrics['y_test_std']:.2f}"
+    )
+    print(
+        f"    Y_pred    : mean={metrics['y_pred_mean']:.2f}, std={metrics['y_pred_std']:.2f}"
+    )
 
 
 # =============================================================================
 # 4. SAUVEGARDE DES MODELES ET RESULTATS
 # =============================================================================
+
 
 def save_model(model, model_name, directory, scaler=None):
     """
@@ -702,12 +801,16 @@ def print_comparison_table(all_classifier_metrics):
     """Affiche un tableau comparatif des modeles de classification en ASCII pur."""
     print_header("TABLEAU COMPARATIF DES MODELES")
 
-    header = f"{'Modele':<25} {'Acc':>8} {'Prec':>8} {'Recall':>8} {'F1':>8} {'AUC-ROC':>8}"
+    header = (
+        f"{'Modele':<25} {'Acc':>8} {'Prec':>8} {'Recall':>8} {'F1':>8} {'AUC-ROC':>8}"
+    )
     print(header)
     print("-" * len(header))
 
     for metrics in all_classifier_metrics:
-        auc = f"{metrics['auc_roc']:.4f}" if metrics.get('auc_roc') is not None else "N/A"
+        auc = (
+            f"{metrics['auc_roc']:.4f}" if metrics.get("auc_roc") is not None else "N/A"
+        )
         print(
             f"{metrics['model_name']:<25} "
             f"{metrics['accuracy']:>8.4f} "
@@ -719,12 +822,15 @@ def print_comparison_table(all_classifier_metrics):
 
     # Meilleur modele par F1-Score
     best = max(all_classifier_metrics, key=lambda m: m["f1_score"])
-    print(f"\n  >> Meilleur modele (F1-Score) : {best['model_name']} ({best['f1_score']:.4f})")
+    print(
+        f"\n  >> Meilleur modele (F1-Score) : {best['model_name']} ({best['f1_score']:.4f})"
+    )
 
 
 # =============================================================================
 # 5. PIPELINE PRINCIPAL
 # =============================================================================
+
 
 def main():
     """
@@ -763,8 +869,12 @@ def main():
     y_test_rul = df_test[TARGET_RUL].copy()
 
     # Gestion valeurs manquantes/infinies pour RUL
-    X_train_rul = X_train_rul.replace([np.inf, -np.inf], np.nan).fillna(X_train_rul.median())
-    X_test_rul = X_test_rul.replace([np.inf, -np.inf], np.nan).fillna(X_train_rul.median())
+    X_train_rul = X_train_rul.replace([np.inf, -np.inf], np.nan).fillna(
+        X_train_rul.median()
+    )
+    X_test_rul = X_test_rul.replace([np.inf, -np.inf], np.nan).fillna(
+        X_train_rul.median()
+    )
 
     # -----------------------------------------------------------------
     # Etape 3 : Entrainement
@@ -795,17 +905,26 @@ def main():
 
     # Eval Random Forest
     rf_metrics = evaluate_classifier(rf_model, X_test, y_test, "Random Forest")
+    rf_metrics["per_source"] = evaluate_per_source(rf_model, X_test, y_test, df_test)
     print_classification_results(rf_metrics)
     all_classifier_metrics.append(rf_metrics)
 
     # Eval XGBoost
     if xgb_model is not None:
         xgb_metrics = evaluate_classifier(xgb_model, X_test, y_test, "XGBoost")
+        xgb_metrics["per_source"] = evaluate_per_source(
+            xgb_model, X_test, y_test, df_test
+        )
         print_classification_results(xgb_metrics)
         all_classifier_metrics.append(xgb_metrics)
 
     # Eval Regression Logistique
-    lr_metrics = evaluate_classifier(lr_model, X_test, y_test, "Logistic Regression", scaler=lr_scaler)
+    lr_metrics = evaluate_classifier(
+        lr_model, X_test, y_test, "Logistic Regression", scaler=lr_scaler
+    )
+    lr_metrics["per_source"] = evaluate_per_source(
+        lr_model, X_test, y_test, df_test, scaler=lr_scaler
+    )
     print_classification_results(lr_metrics)
     all_classifier_metrics.append(lr_metrics)
 
@@ -829,12 +948,14 @@ def main():
     print_header("5. SAUVEGARDE DES MODELES ET METRIQUES")
 
     # Sauvegarder les modeles
-    save_model(rf_model, "random_forest_classifier", MODELS_DIR)
+    save_model(rf_model, MODEL_FILENAMES["classifier"], MODELS_DIR)
     if xgb_model is not None:
-        save_model(xgb_model, "xgboost_classifier", MODELS_DIR)
-    save_model(lr_model, "logistic_regression", MODELS_DIR, scaler=lr_scaler)
-    save_model(iso_model, "isolation_forest", MODELS_DIR)
-    save_model(rul_model, "rf_regressor_rul", MODELS_DIR)
+        save_model(xgb_model, MODEL_FILENAMES["xgboost"], MODELS_DIR)
+    save_model(
+        lr_model, MODEL_FILENAMES["logistic_regression"], MODELS_DIR, scaler=lr_scaler
+    )
+    save_model(iso_model, MODEL_FILENAMES["isolation_forest"], MODELS_DIR)
+    save_model(rul_model, MODEL_FILENAMES["rul_regressor"], MODELS_DIR)
 
     # Preparer toutes les metriques
     all_metrics = {
@@ -845,10 +966,10 @@ def main():
             "n_total_samples": int(len(df)),
             "n_train_samples": int(len(X_train)),
             "n_test_samples": int(len(X_test)),
-            "split_method": "temporal_80_20",
+            "split_method": "temporal_80_20_per_source",
             "features_used": FEATURES_CLASSIFICATION,
             "target_variable": TARGET_CLASSIFICATION,
-            "data_leakage_exclusions": ["machine_status"],
+            "data_leakage_exclusions": LEAKY_FEATURES,
             "imbalance_handling": "class_weight_balanced / scale_pos_weight",
         },
         "models": {
@@ -878,7 +999,7 @@ def main():
     print(f"\n  Features utilisees ({len(FEATURES_CLASSIFICATION)}) :")
     for feat in FEATURES_CLASSIFICATION:
         print(f"    - {feat}")
-    print(f"\n  [OK] Pipeline termine avec succes !")
+    print("\n  [OK] Pipeline termine avec succes !")
     print_separator("*", 70)
 
 

@@ -37,6 +37,8 @@ L'architecture suit un modèle **en couches** (layered architecture) permettant 
 6. **Couche Présentation** — Streamlit (équipe data) + Grafana (opérateurs)
 7. **Couche Transverse** — Docker (conteneurisation) + GitHub Actions (CI/CD)
 
+> **Architecture cible vs prototype livré** : les couches Acquisition (MQTT) et Ingestion décrivent l'architecture cible en usine. Dans le prototype MSPR 2, les données capteurs proviennent du jeu de données (simulé + AI4I) chargé dans PostgreSQL au démarrage (`db/load_data.sh`). Les couches Stockage, Intelligence, Service, Présentation et Transverse sont implémentées et exécutables via `docker compose up`.
+
 ### 2.1 Diagramme d'architecture globale
 
 ```mermaid
@@ -61,13 +63,13 @@ graph TB
     end
 
     subgraph "💾 Couche Stockage"
-        PG["PostgreSQL 16<br/>(données brutes +<br/>prédictions + alertes)"]
+        PG["PostgreSQL 15<br/>(données brutes +<br/>prédictions + alertes)"]
     end
 
     subgraph "🧠 Couche Intelligence"
         PREPROC["Prétraitement<br/>(feature engineering)"]
         RF["Random Forest<br/>(classification pannes)"]
-        XGB["XGBoost<br/>(estimation RUL)"]
+        XGB["XGBoost (classification)<br/>RF Regressor (RUL)"]
         TRAIN["Pipeline d'entraînement<br/>(scikit-learn)"]
     end
 
@@ -195,7 +197,7 @@ erDiagram
         timestamp date_prediction
         varchar type_prediction
         float score_confiance
-        float rul_heures
+        float rul_minutes
         varchar modele_utilise
     }
     
@@ -253,8 +255,10 @@ graph LR
 
 | Modèle | Rôle | Métriques cibles |
 |--------|------|------------------|
-| **Random Forest** | Classification binaire (panne imminente oui/non) | Recall ≥ 90%, Precision ≥ 85% |
-| **XGBoost** | Régression (estimation RUL en heures) | MAE ≤ 24h, R² ≥ 0.85 |
+| **Random Forest** | Classification binaire (maintenance requise oui/non), modèle principal | Recall ≥ 85% (obtenu : 90%), F1 ≥ 75% (obtenu : 80.4%) |
+| **XGBoost** | Classification binaire, modèle de secours | F1 ≥ 75% (obtenu : 81.1%) |
+| **RF Regressor** | Régression : estimation RUL en minutes | MAE ≤ 50 min (obtenu : 27 min), R² ≥ 0.6 (obtenu : 0.72) |
+| **Isolation Forest** | Détection d'anomalies non supervisée | Rôle complémentaire |
 
 **Features extraites** :
 - Moyennes glissantes (1h, 6h, 24h)
@@ -278,14 +282,16 @@ graph LR
 
 | Endpoint | Méthode | Description | Paramètres |
 |----------|---------|-------------|------------|
-| `/health` | GET | État de santé de l'API | — |
-| `/predict/{machine_id}` | POST | Lancer une prédiction pour une machine | `machine_id`, données capteurs |
-| `/machines` | GET | Liste des machines et leur état | `usine_id` (optionnel) |
-| `/machines/{id}` | GET | Détail d'une machine | `id` |
-| `/alerts` | GET | Liste des alertes actives | `niveau`, `usine_id` (filtres) |
-| `/alerts/{id}/acknowledge` | PUT | Acquitter une alerte | `id` |
-| `/predictions/history` | GET | Historique des prédictions | `machine_id`, `date_debut`, `date_fin` |
-| `/models/status` | GET | État des modèles ML déployés | — |
+| `/health` | GET | État de santé de l'API et des modèles chargés | — |
+| `/predict` | POST | Prédiction maintenance pour une machine | 10 mesures capteurs, `machine_id` optionnel |
+| `/predict/batch` | POST | Prédiction pour un lot de machines (max 100) | liste de mesures capteurs |
+| `/predict/rul` | POST | Estimation du RUL (minutes restantes) | 10 mesures capteurs |
+| `/anomaly` | POST | Détection d'anomalie (Isolation Forest) | 10 mesures capteurs |
+| `/metrics` | GET | Métriques d'entraînement des modèles + statistiques API | — |
+| `/model-info` | GET | Model cards résumées (EU AI Act) | — |
+| `/alerts/config` | GET / PUT | Lecture / modification des seuils d'alerte | seuils (optionnels) |
+
+> Perspectives (non implémentées dans le prototype) : historique des prédictions en base (`/predictions/history`), acquittement d'alertes (`/alerts/{id}/acknowledge`).
 
 ### 3.6 Couche Présentation — Streamlit & Grafana
 

@@ -48,15 +48,17 @@ Detecter les comportements anormaux des machines (anomalies capteurs) qui pourra
 - **Volume** : ~80,000 lignes (80% du dataset, split temporel)
 - **Particularite** : Entrainement NON supervise (pas de variable cible)
 
-### Features utilisees (12)
+### Features utilisees (10, capteurs uniquement)
 Identiques aux autres modeles :
-`temperature`, `vibration`, `humidity`, `pressure`, `energy_consumption`, `predicted_remaining_life`, `temp_rolling_10min`, `temp_trend_1h`, `vibr_rolling_10min`, `temp_std_30min`, `energy_vibr_ratio`, `downtime_risk`
+`temperature`, `vibration`, `humidity`, `pressure`, `energy_consumption`, `temp_rolling_10min`, `temp_trend_1h`, `vibr_rolling_10min`, `temp_std_30min`, `energy_vibr_ratio`
 
 ### Features EXCLUES
 
 | Feature exclue | Raison |
 |----------------|--------|
 | `machine_status` | **DATA LEAKAGE** |
+| `predicted_remaining_life` | **DATA LEAKAGE** (cible du modele RUL, quasi-equivalente a la cible de classification) |
+| `downtime_risk` | **DATA LEAKAGE** (derive du RUL) |
 
 ## Hyperparametres
 

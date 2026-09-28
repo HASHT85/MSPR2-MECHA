@@ -1,17 +1,33 @@
 {
   "model_name": "Random Forest",
-  "accuracy": 0.9840454545454546,
-  "precision": 0.9877408056042032,
-  "recall": 0.6211453744493393,
-  "f1_score": 0.7626774847870182,
-  "auc_roc": 0.8979661213596654,
+  "accuracy": 0.9793181818181819,
+  "precision": 0.7270606531881804,
+  "recall": 0.8999037536092397,
+  "f1_score": 0.8043010752688172,
+  "auc_roc": 0.9879591223978498,
   "n_test_samples": 22000,
-  "n_positive_test": 908,
-  "n_negative_test": 21092,
+  "n_positive_test": 1039,
+  "n_negative_test": 20961,
   "confusion_matrix": {
-    "true_negatives": 21085,
-    "false_positives": 7,
-    "false_negatives": 344,
-    "true_positives": 564
+    "true_negatives": 20610,
+    "false_positives": 351,
+    "false_negatives": 104,
+    "true_positives": 935
+  },
+  "per_source": {
+    "MECHA_simulated": {
+      "n": 20000,
+      "n_positive": 1000,
+      "precision": 0.7346456692913386,
+      "recall": 0.933,
+      "f1_score": 0.8220264317180617
+    },
+    "AI4I_2020_real": {
+      "n": 2000,
+      "n_positive": 39,
+      "precision": 0.125,
+      "recall": 0.05128205128205128,
+      "f1_score": 0.07272727272727272
+    }
   }
 }

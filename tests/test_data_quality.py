@@ -3,9 +3,9 @@ Tests de qualite des donnees MECHA.
 Verifie la coherence, les contraintes et la completude du dataset genere.
 """
 
-import pandas as pd
-import numpy as np
 import os
+
+import pandas as pd
 import pytest
 
 
@@ -13,12 +13,17 @@ import pytest
 def dataset():
     """Charge le dataset MECHA pour les tests."""
     paths = [
-        os.path.join(os.path.dirname(__file__), "..", "data", "processed", "mecha_dataset_processed.csv"),
-        "c:/Projet/MSPR/MSPR2-MECHA/data/processed/mecha_dataset_processed.csv",
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "data",
+            "processed",
+            "mecha_dataset_processed.csv",
+        ),
     ]
     for path in paths:
         if os.path.exists(path):
-            return pd.read_csv(path, parse_dates=["timestamp"])
+            return pd.read_csv(path, parse_dates=["timestamp"], low_memory=False)
     pytest.skip("Dataset non disponible")
 
 
@@ -29,24 +34,43 @@ class TestDatasetStructure:
         assert len(dataset) > 0, "Le dataset est vide"
 
     def test_dataset_has_minimum_rows(self, dataset):
-        assert len(dataset) >= 50000, f"Le dataset a seulement {len(dataset)} lignes (min: 50k)"
+        assert len(dataset) >= 50000, (
+            f"Le dataset a seulement {len(dataset)} lignes (min: 50k)"
+        )
 
     def test_dataset_has_required_columns(self, dataset):
         required = [
-            "timestamp", "machine_id", "usine_id", "temperature",
-            "vibration", "humidity", "pressure", "energy_consumption",
-            "machine_status", "anomaly_flag", "predicted_remaining_life",
-            "failure_type", "maintenance_required",
+            "timestamp",
+            "machine_id",
+            "usine_id",
+            "temperature",
+            "vibration",
+            "humidity",
+            "pressure",
+            "energy_consumption",
+            "machine_status",
+            "anomaly_flag",
+            "predicted_remaining_life",
+            "failure_type",
+            "maintenance_required",
         ]
         missing = [col for col in required if col not in dataset.columns]
         assert len(missing) == 0, f"Colonnes manquantes : {missing}"
 
     def test_dataset_has_enrichment_columns(self, dataset):
         enrichments = [
-            "usine_nom", "usine_pays", "ligne_production", "type_piece",
-            "machine_profile", "maintenance_type",
-            "temp_rolling_10min", "temp_trend_1h", "vibr_rolling_10min",
-            "temp_std_30min", "energy_vibr_ratio", "downtime_risk",
+            "usine_nom",
+            "usine_pays",
+            "ligne_production",
+            "type_piece",
+            "machine_profile",
+            "maintenance_type",
+            "temp_rolling_10min",
+            "temp_trend_1h",
+            "vibr_rolling_10min",
+            "temp_std_30min",
+            "energy_vibr_ratio",
+            "downtime_risk",
         ]
         missing = [col for col in enrichments if col not in dataset.columns]
         assert len(missing) == 0, f"Colonnes enrichies manquantes : {missing}"
@@ -105,12 +129,16 @@ class TestDataConsistency:
         """Chaque usine doit avoir au moins 10 machines (plus avec le dataset fusionne)."""
         for usine in dataset["usine_id"].unique():
             n_machines = dataset[dataset["usine_id"] == usine]["machine_id"].nunique()
-            assert n_machines >= 10, f"{usine} a seulement {n_machines} machines (min: 10)"
+            assert n_machines >= 10, (
+                f"{usine} a seulement {n_machines} machines (min: 10)"
+            )
 
     def test_target_has_both_classes(self, dataset):
         """La variable cible doit avoir les deux classes pour le ML."""
         classes = dataset["maintenance_required"].unique()
-        assert 0 in classes and 1 in classes, "Il manque une classe dans maintenance_required"
+        assert 0 in classes and 1 in classes, (
+            "Il manque une classe dans maintenance_required"
+        )
 
     def test_no_machine_status_leakage_in_features(self, dataset):
         """Verifier que machine_status ne sera pas accidentellement utilise comme feature ML."""
@@ -119,7 +147,9 @@ class TestDataConsistency:
         if len(status_2) > 0:
             maint_rate = status_2["maintenance_required"].mean()
             # Si 100% des status=2 ont maintenance=1, c'est du leakage
-            assert maint_rate > 0.5, "La correlation machine_status=2 / maintenance est attendue"
+            assert maint_rate > 0.5, (
+                "La correlation machine_status=2 / maintenance est attendue"
+            )
 
     def test_downtime_risk_bounded(self, dataset):
         """Le score de risque doit etre entre 0 et 1."""

@@ -7,6 +7,7 @@ import pytest
 
 try:
     from fastapi.testclient import TestClient
+
     HAS_FASTAPI = True
 except ImportError:
     HAS_FASTAPI = False
@@ -18,13 +19,11 @@ SAMPLE_NORMAL = {
     "humidity": 55.0,
     "pressure": 3.0,
     "energy_consumption": 2.5,
-    "predicted_remaining_life": 400,
     "temp_rolling_10min": 74.0,
     "temp_trend_1h": 0.01,
     "vibr_rolling_10min": 34.0,
     "temp_std_30min": 1.5,
     "energy_vibr_ratio": 0.07,
-    "downtime_risk": 0.1,
 }
 
 SAMPLE_CRITICAL = {
@@ -33,13 +32,11 @@ SAMPLE_CRITICAL = {
     "humidity": 60.0,
     "pressure": 1.0,
     "energy_consumption": 6.5,
-    "predicted_remaining_life": 10,
     "temp_rolling_10min": 112.0,
     "temp_trend_1h": 0.8,
     "vibr_rolling_10min": 82.0,
     "temp_std_30min": 8.0,
     "energy_vibr_ratio": 0.08,
-    "downtime_risk": 0.95,
 }
 
 
@@ -49,10 +46,12 @@ class TestAPIIntegration:
 
     @pytest.fixture
     def client(self):
-        import sys
         import os
+        import sys
+
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
         from api.main import app
+
         return TestClient(app)
 
     def test_normal_machine_not_critical(self, client):
@@ -62,8 +61,9 @@ class TestAPIIntegration:
         data = response.json()
         # Avec des valeurs normales, la confiance en maintenance doit etre faible
         # ou la prediction doit etre 'normal'
-        assert data["prediction"] in ["normal", "maintenance_required", 0, 1], \
+        assert data["prediction"] in ["normal", "maintenance_required", 0, 1], (
             f"Prediction inattendue: {data['prediction']}"
+        )
 
     def test_critical_machine_detected(self, client):
         """Une machine critique doit etre detectee."""
@@ -71,7 +71,9 @@ class TestAPIIntegration:
         assert response.status_code == 200
         data = response.json()
         # Avec des valeurs critiques, au moins des alertes doivent etre declenchees
-        assert len(data.get("alerts", [])) > 0, "Aucune alerte pour une machine critique"
+        assert len(data.get("alerts", [])) > 0, (
+            "Aucune alerte pour une machine critique"
+        )
 
     def test_batch_consistency(self, client):
         """Les predictions batch doivent etre coherentes avec les predictions individuelles."""
@@ -93,8 +95,10 @@ class TestAPIIntegration:
         assert response.status_code == 200
         data = response.json()
         # On s'attend a une anomalie ou au moins une severite elevee
-        assert data.get("is_anomaly") is True or data.get("severity") in ["high", "critical"], \
-            f"Donnees critiques non detectees comme anomalie: {data}"
+        assert data.get("is_anomaly") is True or data.get("severity") in [
+            "high",
+            "critical",
+        ], f"Donnees critiques non detectees comme anomalie: {data}"
 
     def test_rul_prediction_coherent(self, client):
         """Le RUL d'une machine critique doit etre plus bas qu'une machine normale."""
@@ -102,10 +106,11 @@ class TestAPIIntegration:
         resp_critical = client.post("/predict/rul", json=SAMPLE_CRITICAL)
 
         if resp_normal.status_code == 200 and resp_critical.status_code == 200:
-            rul_normal = resp_normal.json()["rul_hours"]
-            rul_critical = resp_critical.json()["rul_hours"]
-            assert rul_normal > rul_critical, \
+            rul_normal = resp_normal.json()["rul_minutes"]
+            rul_critical = resp_critical.json()["rul_minutes"]
+            assert rul_normal > rul_critical, (
                 f"RUL normal ({rul_normal}) devrait etre > RUL critique ({rul_critical})"
+            )
 
     def test_full_workflow(self, client):
         """Test du workflow complet : health -> predict -> anomaly -> rul."""

@@ -306,17 +306,17 @@ class TestPredictEndpoint:
             "humidity": 45.0,
             "current": 12.8
         }
-        response = client.post("/predict/LYN-CNC-01", json=payload)
+        response = client.post("/predict", json=payload)
         assert response.status_code == 200
         data = response.json()
         assert "prediction" in data
         assert "confidence" in data
-        assert "rul_hours" in data
+        assert "rul_minutes" in data
 
     def test_predict_missing_field(self):
         """Rejet si champ obligatoire manquant."""
         payload = {"machine_id": "LYN-CNC-01"}
-        response = client.post("/predict/LYN-CNC-01", json=payload)
+        response = client.post("/predict", json=payload)
         assert response.status_code == 422  # Validation error
 
     def test_predict_unknown_machine(self):
@@ -409,8 +409,8 @@ class TestHealthScore:
 class TestFormatting:
     """Tests de formatage d'affichage."""
 
-    def test_format_rul_hours(self):
-        """Formatage RUL en heures."""
+    def test_format_rul_minutes(self):
+        """Formatage RUL en minutes."""
         assert format_rul_display(48) == "2 jours"
 
     def test_format_rul_minutes(self):
@@ -462,7 +462,7 @@ class TestEndToEndPipeline:
         assert count > 0
         
         # 3. Lancer la prédiction
-        response = api_client.post("/predict/LYN-CNC-01")
+        response = api_client.post("/predict", json=latest_features("LYN-CNC-01"))
         assert response.status_code == 200
         assert response.json()["prediction"] == "normal"
         
@@ -477,7 +477,7 @@ class TestEndToEndPipeline:
         time.sleep(5)
         
         # 2. Lancer la prédiction
-        response = api_client.post("/predict/LYN-CNC-01")
+        response = api_client.post("/predict", json=latest_features("LYN-CNC-01"))
         assert response.status_code == 200
         assert response.json()["prediction"] == "failure_imminent"
         

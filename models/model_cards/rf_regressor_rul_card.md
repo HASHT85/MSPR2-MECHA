@@ -46,10 +46,10 @@ Estimer la valeur de `predicted_remaining_life` a partir des mesures capteurs (t
 - **Variable cible** : `predicted_remaining_life`
 
 ### Split des donnees
-- **Methode** : Split temporel 80/20
+- **Methode** : Split temporel 80/20 par source de donnees
 - **Coherence** : Meme split que les modeles de classification
 
-### Features utilisees (11)
+### Features utilisees (10, capteurs uniquement)
 
 | Feature | Description | Type |
 |---------|-------------|------|
@@ -63,7 +63,6 @@ Estimer la valeur de `predicted_remaining_life` a partir des mesures capteurs (t
 | `vibr_rolling_10min` | Moyenne glissante vibration | Numerique |
 | `temp_std_30min` | Ecart-type temperature | Numerique |
 | `energy_vibr_ratio` | Ratio energie/vibration | Numerique |
-| `downtime_risk` | Score de risque d'arret | Numerique |
 
 **Note** : `predicted_remaining_life` est EXCLUE des features car c'est la variable cible.
 
@@ -73,6 +72,7 @@ Estimer la valeur de `predicted_remaining_life` a partir des mesures capteurs (t
 |----------------|--------|
 | `machine_status` | **DATA LEAKAGE** |
 | `predicted_remaining_life` | Variable cible (pour ce modele) |
+| `downtime_risk` | **DATA LEAKAGE** : construit a 45 % a partir de la cible (rul_risk = 1 - RUL/500) |
 
 ## Hyperparametres
 
@@ -99,7 +99,7 @@ Estimer la valeur de `predicted_remaining_life` a partir des mesures capteurs (t
 | **MSE** | Mean Squared Error |
 
 ### Interpretation
-- **MAE** : En moyenne, l'erreur de prediction en unites de temps
+- **MAE** : En moyenne, l'erreur de prediction en **minutes** (echelle 0-500 min du jeu de donnees). Resultat : 26.9 min (R2 = 0.72)
 - **R2** : Proportion de la variance de la RUL expliquee par le modele
 - **RMSE** : Penalise davantage les grandes erreurs (utile pour les cas critiques)
 

@@ -45,14 +45,28 @@ Fournir une baseline de performance pour la classification de maintenance. Si le
 - **StandardScaler** : Normalisation des features (moyenne=0, ecart-type=1)
 - **Justification** : La regression logistique est sensible a l'echelle des features (contrairement aux arbres de decision)
 
-### Features utilisees (12)
-Identiques aux autres modeles de classification.
+### Features utilisees (10, capteurs uniquement)
 
-### Features EXCLUES
+| Feature | Description | Type |
+|---------|-------------|------|
+| `temperature` | Temperature machine (degres C) | Numerique |
+| `vibration` | Niveau de vibration (mm/s) | Numerique |
+| `humidity` | Taux d'humidite (%) | Numerique |
+| `pressure` | Pression (bar) | Numerique |
+| `energy_consumption` | Consommation energetique (kWh) | Numerique |
+| `temp_rolling_10min` | Moyenne glissante temperature 10min | Numerique |
+| `temp_trend_1h` | Tendance temperature 1h | Numerique |
+| `vibr_rolling_10min` | Moyenne glissante vibration 10min | Numerique |
+| `temp_std_30min` | Ecart-type temperature 30min | Numerique |
+| `energy_vibr_ratio` | Ratio energie/vibration | Numerique |
+
+### Features EXCLUES (data leakage)
 
 | Feature exclue | Raison |
 |----------------|--------|
-| `machine_status` | **DATA LEAKAGE** |
+| `machine_status` | **DATA LEAKAGE** confirme en MSPR 1 : cette variable encode directement l'etat de la machine et fuit l'information cible |
+| `predicted_remaining_life` | **DATA LEAKAGE** identifie en revue MSPR 2 : dans la simulation, RUL = 500 x (1 - degradation) et la cible vaut 1 des que degradation > 0.6 ; la regle « RUL < 200 » reproduit la cible a 99 % |
+| `downtime_risk` | **DATA LEAKAGE** : score composite construit a 45 % a partir du RUL |
 
 ### Desequilibre des classes
 **Gestion** : `class_weight='balanced'`

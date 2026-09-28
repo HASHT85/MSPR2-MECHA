@@ -32,7 +32,7 @@
 | Service | Technologie | Port | Description |
 |---------|------------|------|-------------|
 | **API** | FastAPI | `8000` | API REST de prédiction ML (9 endpoints) |
-| **Dashboard** | Streamlit | `8501` | Dashboard métier multi-niveaux (5 vues) |
+| **Dashboard** | Streamlit | `8501` | Dashboard métier multi-niveaux (5 vues), consomme l'API pour toutes les prédictions IA |
 | **Monitoring** | Grafana | `3000` | Supervision temps réel (3 dashboards par rôle) |
 | **Base de données** | PostgreSQL 15 | `5432` | Stockage des données capteurs (110k mesures) |
 
@@ -90,16 +90,21 @@
 
 | Modèle | Type | F1-Score | AUC-ROC | Usage |
 |--------|------|----------|---------|-------|
-| **Random Forest** | Classification | **76.3%** | 89.8% | Prédiction de pannes (modèle principal) |
-| **XGBoost** | Classification | 75.9% | **90.5%** | Prédiction de pannes (alternatif) |
-| **Logistic Regression** | Classification | 40.6% | 86.8% | Baseline de comparaison |
-| **Isolation Forest** | Anomalie | — | 77.4% | Détection d'anomalies non-supervisée |
-| **RF Regressor** | Régression | MAE=39 min | R²=0.60 | Estimation RUL (durée de vie restante) |
+| **Random Forest** | Classification | **80.4%** | 98.8% | Prédiction de pannes (modèle principal) |
+| **XGBoost** | Classification | 81.1% | **98.8%** | Prédiction de pannes (alternatif) |
+| **Logistic Regression** | Classification | 23.3% | 89.5% | Baseline de comparaison |
+| **Isolation Forest** | Anomalie | — | 83.9% | Détection d'anomalies non-supervisée |
+| **RF Regressor** | Régression | MAE=27 min | R²=0.72 | Estimation RUL (durée de vie restante, en minutes) |
+
+> Métriques mesurées sur le jeu de test (22 000 lignes), lues par l'API sur `GET /metrics`.
+> Sur la partie **réelle** (AI4I 2020) du jeu de test, le F1 tombe à ~7 % : les capteurs AI4I
+> (couple, usure d'outil) ne sont pas dans les 10 features capteurs communes. Limite documentée et assumée.
 
 ### Bonnes pratiques ML
-- ✅ **Split temporel 80/20** — Pas de data leakage
-- ✅ **`machine_status` exclu** des features d'entraînement
-- ✅ **Gestion du déséquilibre** — `class_weight='balanced'`
+- ✅ **10 features capteurs uniquement** — `predicted_remaining_life` et `downtime_risk` sont **exclus** des entrées (ils contiennent la réponse : fuite de données corrigée), tout comme `machine_status`
+- ✅ **Split temporel 80/20 par source de données** — on entraîne sur le passé, on teste sur le futur, et les données réelles AI4I sont présentes dans le train comme dans le test
+- ✅ **Métriques ventilées par source** (simulé vs réel) pour ne pas masquer un modèle nul sur le réel
+- ✅ **Gestion du déséquilibre** — `class_weight='balanced'` / `scale_pos_weight`
 - ✅ **5 Model Cards** conformes EU AI Act
 
 ---
@@ -127,6 +132,20 @@ docker compose up -d
 # 4. Vérifier les services
 docker compose ps
 ```
+
+### Régénérer les données et les modèles (reproductibilité)
+
+Les jeux de données finaux et les modèles `.joblib` ne sont pas versionnés (fichiers lourds).
+Ils se reconstruisent de zéro en trois commandes, exactement comme le fait la CI :
+
+```bash
+python data/scripts/generate_data.py      # 100 000 lignes simulées -> data/raw + data/processed
+python data/scripts/merge_datasets.py     # fusion avec AI4I 2020 (10 000 lignes réelles) -> 110 000 lignes
+python models/training/train_models.py    # 5 modèles -> models/saved_models + métriques JSON (~10 s)
+```
+
+Sans modèles, l'API démarre en **mode fallback** (heuristiques) et le signale sur `GET /health`
+(`models_loaded: false`). Le dashboard affiche alors « MODE MOCK » dans la barre latérale.
 
 ### Accès aux services
 
@@ -163,11 +182,11 @@ docker compose ps
 | `POST` | `/predict` | Prédiction maintenance (1 machine) |
 | `POST` | `/predict/batch` | Prédiction batch (jusqu'à 100 machines) |
 | `POST` | `/predict/rul` | Estimation de durée de vie restante (RUL) |
-| `POST` | `/detect/anomaly` | Détection d'anomalies |
-| `GET` | `/metrics` | Métriques de performance API |
-| `GET` | `/model/info` | Informations sur les modèles chargés |
-| `GET` | `/alert/config` | Configuration des seuils d'alerte |
-| `PUT` | `/alert/config` | Mise à jour des seuils d'alerte |
+| `POST` | `/anomaly` | Détection d'anomalies (Isolation Forest) |
+| `GET` | `/metrics` | Métriques d'entraînement des modèles + statistiques API |
+| `GET` | `/model-info` | Model cards résumées des modèles chargés |
+| `GET` | `/alerts/config` | Configuration des seuils d'alerte |
+| `PUT` | `/alerts/config` | Mise à jour des seuils d'alerte |
 
 ### Exemple de requête
 
@@ -179,8 +198,8 @@ curl -X POST http://localhost:8000/predict \
     "vibration": 45.2,
     "humidity": 60.0,
     "pressure": 2.5,
-    "energy_consumption": 1.8,
-    "predicted_remaining_life": 120
+    "energy_consumption": 3.8,
+    "machine_id": "12"
   }'
 ```
 
@@ -196,11 +215,13 @@ pytest -v
 pytest --cov=api --cov=models --cov-report=term-missing -v
 ```
 
-**79 tests** couvrant :
+**102 tests** couvrant :
 - 🔬 Qualité des données (19 tests)
 - 🔌 Intégration API (6 tests)
-- 🤖 Modèles ML (13 tests)
-- 📡 Endpoints API (41 tests)
+- 🤖 Modèles ML (16 tests, dont la cohérence entraînement ↔ API et le chargement réel des modèles par l'API)
+- 📡 Endpoints API (61 tests)
+
+En CI, les données et les modèles sont régénérés avant les tests : aucun test n'est sauté.
 
 ---
 
@@ -209,10 +230,10 @@ pytest --cov=api --cov=models --cov-report=term-missing -v
 ```
 MSPR2-MECHA/
 ├── 📂 api/                    # API FastAPI
-│   ├── main.py                # 9 endpoints REST (1139 lignes)
+│   ├── main.py                # 9 endpoints REST
 │   └── Dockerfile             # Image Docker multi-stage
 ├── 📂 app/src/                # Dashboard Streamlit
-│   └── dashboard.py           # 5 vues métier (918 lignes)
+│   └── dashboard.py           # 5 vues métier (prédictions via l'API)
 ├── 📂 data/                   # Pipeline de données
 │   ├── scripts/               # Génération + fusion datasets
 │   ├── processed/             # Dataset final (110k lignes)
@@ -229,9 +250,10 @@ MSPR2-MECHA/
 │   ├── model_cards/           # 5 fiches modèles (EU AI Act)
 │   ├── evaluation/            # Métriques JSON
 │   └── training/              # Script d'entraînement
-├── 📂 tests/                  # Tests (79 tests)
+├── 📂 tests/                  # Tests (102 tests)
 ├── 🐳 docker-compose.yml      # Orchestration 4 services
 ├── ⚙️ .env.example             # Configuration template
+├── 🧹 ruff.toml                # Règles de lint/format (CI)
 └── 📄 README.md               # Ce fichier
 ```
 

@@ -1,111 +1,159 @@
 {
   "metadata": {
     "project": "MECHA - Maintenance Predictive",
-    "date": "2026-05-30T17:44:40.905328",
+    "date": "2026-09-28T23:40:32.435208",
     "dataset": "mecha_dataset_processed.csv",
     "n_total_samples": 110000,
     "n_train_samples": 88000,
     "n_test_samples": 22000,
-    "split_method": "temporal_80_20",
+    "split_method": "temporal_80_20_per_source",
     "features_used": [
       "temperature",
       "vibration",
       "humidity",
       "pressure",
       "energy_consumption",
-      "predicted_remaining_life",
       "temp_rolling_10min",
       "temp_trend_1h",
       "vibr_rolling_10min",
       "temp_std_30min",
-      "energy_vibr_ratio",
-      "downtime_risk"
+      "energy_vibr_ratio"
     ],
     "target_variable": "maintenance_required",
     "data_leakage_exclusions": [
-      "machine_status"
+      "machine_status",
+      "predicted_remaining_life",
+      "downtime_risk"
     ],
     "imbalance_handling": "class_weight_balanced / scale_pos_weight"
   },
   "models": {
     "random_forest": {
       "model_name": "Random Forest",
-      "accuracy": 0.9840454545454546,
-      "precision": 0.9877408056042032,
-      "recall": 0.6211453744493393,
-      "f1_score": 0.7626774847870182,
-      "auc_roc": 0.8979661213596654,
+      "accuracy": 0.9793181818181819,
+      "precision": 0.7270606531881804,
+      "recall": 0.8999037536092397,
+      "f1_score": 0.8043010752688172,
+      "auc_roc": 0.9879591223978498,
       "n_test_samples": 22000,
-      "n_positive_test": 908,
-      "n_negative_test": 21092,
+      "n_positive_test": 1039,
+      "n_negative_test": 20961,
       "confusion_matrix": {
-        "true_negatives": 21085,
-        "false_positives": 7,
-        "false_negatives": 344,
-        "true_positives": 564
+        "true_negatives": 20610,
+        "false_positives": 351,
+        "false_negatives": 104,
+        "true_positives": 935
+      },
+      "per_source": {
+        "MECHA_simulated": {
+          "n": 20000,
+          "n_positive": 1000,
+          "precision": 0.7346456692913386,
+          "recall": 0.933,
+          "f1_score": 0.8220264317180617
+        },
+        "AI4I_2020_real": {
+          "n": 2000,
+          "n_positive": 39,
+          "precision": 0.125,
+          "recall": 0.05128205128205128,
+          "f1_score": 0.07272727272727272
+        }
       }
     },
     "logistic_regression": {
       "model_name": "Logistic Regression",
-      "accuracy": 0.9045,
-      "precision": 0.2732801216267579,
-      "recall": 0.7918502202643172,
-      "f1_score": 0.4063294716021475,
-      "auc_roc": 0.867879422308477,
+      "accuracy": 0.7143181818181819,
+      "precision": 0.13355685945794915,
+      "recall": 0.9201154956689124,
+      "f1_score": 0.233256069293644,
+      "auc_roc": 0.8946900745456099,
       "n_test_samples": 22000,
-      "n_positive_test": 908,
-      "n_negative_test": 21092,
+      "n_positive_test": 1039,
+      "n_negative_test": 20961,
       "confusion_matrix": {
-        "true_negatives": 19180,
-        "false_positives": 1912,
-        "false_negatives": 189,
-        "true_positives": 719
+        "true_negatives": 14759,
+        "false_positives": 6202,
+        "false_negatives": 83,
+        "true_positives": 956
+      },
+      "per_source": {
+        "MECHA_simulated": {
+          "n": 20000,
+          "n_positive": 1000,
+          "precision": 0.1492442322991249,
+          "recall": 0.938,
+          "f1_score": 0.25751544269045984
+        },
+        "AI4I_2020_real": {
+          "n": 2000,
+          "n_positive": 39,
+          "precision": 0.020618556701030927,
+          "recall": 0.46153846153846156,
+          "f1_score": 0.039473684210526314
+        }
       }
     },
     "isolation_forest": {
       "model_name": "Isolation Forest",
-      "accuracy": 0.7473181818181818,
-      "precision": 0.0945074106364429,
-      "recall": 0.5969162995594713,
-      "f1_score": 0.1631792864669577,
-      "auc_roc": 0.7740660592445432,
-      "n_anomalies_detected": 5735,
-      "contamination_effective": 0.2606818181818182,
+      "accuracy": 0.9297727272727273,
+      "precision": 0.2936378466557912,
+      "recall": 0.34648700673724736,
+      "f1_score": 0.31788079470198677,
+      "auc_roc": 0.8386244971469312,
+      "n_anomalies_detected": 1226,
+      "contamination_effective": 0.05572727272727273,
       "n_test_samples": 22000,
       "confusion_matrix": {
-        "true_negatives": 15899,
-        "false_positives": 5193,
-        "false_negatives": 366,
-        "true_positives": 542
+        "true_negatives": 20095,
+        "false_positives": 866,
+        "false_negatives": 679,
+        "true_positives": 360
       }
     },
     "rf_regressor_rul": {
       "model_name": "RF Regressor RUL",
-      "mae": 39.254895337802296,
-      "rmse": 69.28085983780286,
-      "r2_score": 0.5980291228935453,
-      "mse": 4799.837539865286,
+      "mae": 26.93781274016548,
+      "rmse": 46.35814212160351,
+      "r2_score": 0.7189304582844162,
+      "mse": 2149.0773409667895,
       "n_test_samples": 22000,
-      "y_test_mean": 309.1904090909091,
-      "y_test_std": 109.27626555048674,
-      "y_pred_mean": 344.5968625855037,
-      "y_pred_std": 72.71477786251386
+      "y_test_mean": 336.17345454545455,
+      "y_test_std": 87.44379558915689,
+      "y_pred_mean": 337.99082486208624,
+      "y_pred_std": 72.76101295795024
     },
     "xgboost": {
       "model_name": "XGBoost",
-      "accuracy": 0.9837727272727272,
-      "precision": 0.9791304347826087,
-      "recall": 0.6200440528634361,
-      "f1_score": 0.7592717464598786,
-      "auc_roc": 0.9046796298740738,
+      "accuracy": 0.9805,
+      "precision": 0.747564935064935,
+      "recall": 0.8864292589027911,
+      "f1_score": 0.8110964332892999,
+      "auc_roc": 0.9882502354732853,
       "n_test_samples": 22000,
-      "n_positive_test": 908,
-      "n_negative_test": 21092,
+      "n_positive_test": 1039,
+      "n_negative_test": 20961,
       "confusion_matrix": {
-        "true_negatives": 21080,
-        "false_positives": 12,
-        "false_negatives": 345,
-        "true_positives": 563
+        "true_negatives": 20650,
+        "false_positives": 311,
+        "false_negatives": 118,
+        "true_positives": 921
+      },
+      "per_source": {
+        "MECHA_simulated": {
+          "n": 20000,
+          "n_positive": 1000,
+          "precision": 0.757201646090535,
+          "recall": 0.92,
+          "f1_score": 0.8306997742663657
+        },
+        "AI4I_2020_real": {
+          "n": 2000,
+          "n_positive": 39,
+          "precision": 0.058823529411764705,
+          "recall": 0.02564102564102564,
+          "f1_score": 0.03571428571428571
+        }
       }
     }
   }
