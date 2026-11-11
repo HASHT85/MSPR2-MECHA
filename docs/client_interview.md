@@ -185,6 +185,10 @@ flowchart LR
 
 > *« On a des plannings de maintenance préventive basés sur les recommandations constructeur : tous les 6 mois, tous les 1000 heures, etc. Mais c'est du systématique, pas de l'optimisé. Parfois on intervient trop tôt, parfois trop tard. »* — Mme Martin
 
+**Modélisation graphique normalisée BPMN 2.0 du processus actuel (`AS-IS`) issu des entretiens** :
+
+![BPMN 2.0 AS-IS — Processus actuel de maintenance chez MECHA](images/diag_bpmn_asis.png)
+
 ### Section C — Problématiques et douleurs
 
 **C1 — Principaux problèmes** :

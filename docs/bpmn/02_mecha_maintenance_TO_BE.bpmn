@@ -1,0 +1,93 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_MECHA_TO_BE" targetNamespace="http://mecha-predict.industrial/bpmn/tobe">
+  <bpmn:collaboration id="Collab_TO_BE">
+    <bpmn:participant id="Pool_Usine_TOBE" name="Ecosysteme MECHA Predict — Processus Cible TO-BE (Maintenance Predictive Human-in-the-Loop)" processRef="Process_TO_BE"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_TO_BE" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_TOBE">
+      <bpmn:lane id="Lane_IoT" name="Capteurs IoT / SCADA &amp; PostgreSQL 15">
+        <bpmn:flowNodeRef>Start_Telemetry</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Features</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_AI" name="Plateforme MECHA Predict (FastAPI + 5 Modeles ML + Streamlit / Grafana)">
+        <bpmn:flowNodeRef>Task_Inference</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Risk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Nominal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PublishAlert</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Maint_TOBE" name="Technicien &amp; Responsable Maintenance (Human-in-the-Loop — EU AI Act Art. 14)">
+        <bpmn:flowNodeRef>Task_VerifyField</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_HumanValid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_FalsePositive</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Calibrated</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PrepIntervention</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Prod_TOBE" name="Responsable Production &amp; GMAO / MES">
+        <bpmn:flowNodeRef>Task_SlotArbitration</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PreventiveAction</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_QualifyC8</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Secured</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_Telemetry" name="Acquisition IoT 1 min (5 capteurs)">
+      <bpmn:timerEventDefinition id="Timer_1min"/>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_Features" name="Agregats glissants (10m/30m/1h) &amp; Stockage SQL mecha_data"/>
+    <bpmn:serviceTask id="Task_Inference" name="Inference API /predict (&lt;50 ms) : Proba RF/XGB + RUL min + IsolationForest"/>
+    <bpmn:exclusiveGateway id="Gw_Risk" name="Risque &gt;= 50% ou RUL &lt; 150 min ?"/>
+    <bpmn:endEvent id="End_Nominal" name="Mise a jour v_machine_status (Nominal)"/>
+    <bpmn:serviceTask id="Task_PublishAlert" name="Notification explicable Streamlit (6 vues) &amp; Grafana"/>
+    <bpmn:userTask id="Task_VerifyField" name="Inspection physique ciblee avec facteurs IA"/>
+    <bpmn:exclusiveGateway id="Gw_HumanValid" name="Validation humaine terrain ?"/>
+    <bpmn:userTask id="Task_FalsePositive" name="Qualification Fausse Alerte + Ajustement seuils API (C4/C8)"/>
+    <bpmn:endEvent id="End_Calibrated" name="Seuil affine &amp; trace"/>
+    <bpmn:userTask id="Task_PrepIntervention" name="Preparation piece detachee avant fin du RUL"/>
+    <bpmn:userTask id="Task_SlotArbitration" name="Planification creneau hors pic de charge (inter-equipes)"/>
+    <bpmn:manualTask id="Task_PreventiveAction" name="Intervention preventive ciblee (~45 min, 0 casse, 0 rebut)"/>
+    <bpmn:userTask id="Task_QualifyC8" name="Cloture OT &amp; Retour terrain anonymise (Vue Accompagnement C8)"/>
+    <bpmn:endEvent id="End_Secured" name="Disponibilite &amp; TRS preserves"/>
+
+    <bpmn:sequenceFlow id="T1" sourceRef="Start_Telemetry" targetRef="Task_Features"/>
+    <bpmn:sequenceFlow id="T2" sourceRef="Task_Features" targetRef="Task_Inference"/>
+    <bpmn:sequenceFlow id="T3" sourceRef="Task_Inference" targetRef="Gw_Risk"/>
+    <bpmn:sequenceFlow id="T4" name="Non (Sain)" sourceRef="Gw_Risk" targetRef="End_Nominal"/>
+    <bpmn:sequenceFlow id="T5" name="Oui (Alerte)" sourceRef="Gw_Risk" targetRef="Task_PublishAlert"/>
+    <bpmn:sequenceFlow id="T6" sourceRef="Task_PublishAlert" targetRef="Task_VerifyField"/>
+    <bpmn:sequenceFlow id="T7" sourceRef="Task_VerifyField" targetRef="Gw_HumanValid"/>
+    <bpmn:sequenceFlow id="T8" name="Faux positif" sourceRef="Gw_HumanValid" targetRef="Task_FalsePositive"/>
+    <bpmn:sequenceFlow id="T9" sourceRef="Task_FalsePositive" targetRef="End_Calibrated"/>
+    <bpmn:sequenceFlow id="T10" name="Vrai positif confirme" sourceRef="Gw_HumanValid" targetRef="Task_PrepIntervention"/>
+    <bpmn:sequenceFlow id="T11" sourceRef="Task_PrepIntervention" targetRef="Task_SlotArbitration"/>
+    <bpmn:sequenceFlow id="T12" sourceRef="Task_SlotArbitration" targetRef="Task_PreventiveAction"/>
+    <bpmn:sequenceFlow id="T13" sourceRef="Task_PreventiveAction" targetRef="Task_QualifyC8"/>
+    <bpmn:sequenceFlow id="T14" sourceRef="Task_QualifyC8" targetRef="End_Secured"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_TOBE">
+    <bpmndi:BPMNPlane id="BPMNPlane_TOBE" bpmnElement="Collab_TO_BE">
+      <bpmndi:BPMNShape id="Shape_Pool_TOBE" bpmnElement="Pool_Usine_TOBE" isHorizontal="true">
+        <dc:Bounds x="80" y="50" width="1420" height="680"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_L1" bpmnElement="Lane_IoT" isHorizontal="true"><dc:Bounds x="110" y="50" width="1390" height="150"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_L2" bpmnElement="Lane_AI" isHorizontal="true"><dc:Bounds x="110" y="200" width="1390" height="170"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_L3" bpmnElement="Lane_Maint_TOBE" isHorizontal="true"><dc:Bounds x="110" y="370" width="1390" height="180"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_L4" bpmnElement="Lane_Prod_TOBE" isHorizontal="true"><dc:Bounds x="110" y="550" width="1390" height="180"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_Start" bpmnElement="Start_Telemetry"><dc:Bounds x="170" y="107" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_Feat" bpmnElement="Task_Features"><dc:Bounds x="260" y="85" width="210" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_Inf" bpmnElement="Task_Inference"><dc:Bounds x="260" y="245" width="210" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_GwR" bpmnElement="Gw_Risk" isMarkerVisible="true"><dc:Bounds x="530" y="260" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_EndN" bpmnElement="End_Nominal"><dc:Bounds x="650" y="215" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_Pub" bpmnElement="Task_PublishAlert"><dc:Bounds x="640" y="270" width="200" height="75"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_Ver" bpmnElement="Task_VerifyField"><dc:Bounds x="640" y="420" width="200" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_GwH" bpmnElement="Gw_HumanValid" isMarkerVisible="true"><dc:Bounds x="900" y="435" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_FP" bpmnElement="Task_FalsePositive"><dc:Bounds x="1020" y="385" width="210" height="70"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_EndC" bpmnElement="End_Calibrated"><dc:Bounds x="1280" y="402" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_Prep" bpmnElement="Task_PrepIntervention"><dc:Bounds x="1020" y="468" width="210" height="70"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_Slot" bpmnElement="Task_SlotArbitration"><dc:Bounds x="760" y="600" width="200" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_Prev" bpmnElement="Task_PreventiveAction"><dc:Bounds x="1000" y="600" width="200" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_Qual" bpmnElement="Task_QualifyC8"><dc:Bounds x="1235" y="600" width="190" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ST_EndS" bpmnElement="End_Secured"><dc:Bounds x="1450" y="622" width="36" height="36"/></bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

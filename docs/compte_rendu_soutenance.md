@@ -104,7 +104,9 @@ La grille d'entretien couvre **6 axes thematiques (A a F)** et **24 questions ou
 1. **Capture des verbatims metiers** lors de l'entretien ;
 2. **Qualification des irritants (*Pain Points*)** et quantification des impacts financiers ;
 3. **Priorisation fonctionnelle MoSCoW** (`Must`, `Should`, `Could`, `Won't`) ;
-4. **Traduction en exigences techniques mesurables** reliees aux criteres d'acceptation de la suite de tests.
+4. **Modélisation graphique BPMN 2.0 (`AS-IS` / `TO-BE`) et traduction en exigences mesurables** reliees aux criteres d'acceptation de la suite de tests (`docs/bpmn_processus_metiers.md`).
+
+![Processus actuel AS-IS modelise en BPMN 2.0](images/diag_bpmn_asis.png)
 
 ### 2.2 Besoins fonctionnels identifies (priorisation MoSCoW)
 
@@ -342,7 +344,9 @@ Conformement aux exigences du sujet (guide metier de 1 a 2 pages destine aux equ
 Au-dela du cadrage methodologique complet (`docs/change_management.md` : cartographie des 5 populations, **4 axes Informer / Communiquer / Former / Faire participer**, **FutureWheel** et modele transitionnel de **William Bridges**), l'equipe a developpe un **outil operationnel directement integre a l'application** (6e vue Streamlit **`Accompagnement`**) :
 - **Qualification terrain *Human-in-the-Loop*** : formulaire permettant aux techniciens de valider ou contester une alerte IA en moins de 15 secondes, sans aucun identifiant nominatif (conformite RGPD stricte), alimentant le calcul en direct du taux d'accord IA/terrain et du taux de fausses alertes percues ;
 - **Fiches reflexes interactives par profil** (*Technicien Maintenance*, *Directeur d'Usine*, *Direction Generale*) et suivi d'avancement des 4 phases de deploiement ;
-- ** Calibration participative des seuils** via connexion directe a `PUT /alerts/config`.
+- **Calibration participative des seuils** via connexion directe a `PUT /alerts/config`.
+
+![Processus cible TO-BE MECHA Predict modelise en BPMN 2.0 (Human-in-the-Loop)](images/diag_bpmn_tobe.png)
 
 ---
 

@@ -210,6 +210,7 @@ Tous les livrables exigés par le sujet **MSPR TPRE841** sont regroupés dans le
 | **08. Conduite du Changement** | [`docs/change_management.md`](docs/change_management.md) | [`livrables/02_Documentation_et_Validation/08_Conduite_du_Changement_C8.pdf`](livrables/02_Documentation_et_Validation/08_Conduite_du_Changement_C8.pdf) | **C8** |
 | **09. Analyse RGPD & EU AI Act** | [`docs/rgpd_analysis.md`](docs/rgpd_analysis.md) | [`livrables/02_Documentation_et_Validation/09_Analyse_RGPD_et_EU_AI_Act.pdf`](livrables/02_Documentation_et_Validation/09_Analyse_RGPD_et_EU_AI_Act.pdf) | **C2, C7** |
 | **10. Plan de Déploiement Multi-Sites** | [`docs/deployment_plan.md`](docs/deployment_plan.md) | [`livrables/02_Documentation_et_Validation/10_Plan_Deploiement_Multi_Sites.pdf`](livrables/02_Documentation_et_Validation/10_Plan_Deploiement_Multi_Sites.pdf) | **C4, C8** |
+| **11. Modélisation BPMN 2.0 (AS-IS / TO-BE)** | [`docs/bpmn_processus_metiers.md`](docs/bpmn_processus_metiers.md) & [`docs/bpmn/`](docs/bpmn/) | [`livrables/02_Documentation_et_Validation/11_Modelisation_Processus_BPMN_AS_IS_TO_BE_C1_C8.pdf`](livrables/02_Documentation_et_Validation/11_Modelisation_Processus_BPMN_AS_IS_TO_BE_C1_C8.pdf) | **C1, C4, C8** |
 
 ---
 
@@ -218,14 +219,14 @@ Tous les livrables exigés par le sujet **MSPR TPRE841** sont regroupés dans le
 ```text
 MSPR2-MECHA/
 ├── livrables/                  # Dossier prêt à rendre au jury (PDF A4 paginés & support PowerPoint)
-│   ├── 01_Dossier_Global/      # Compte-rendu maître consolidé (C1 à C8)
-│   ├── 02_Documentation_et_Validation/ # 10 dossiers thématiques PDF (dont le Guide Métier 2 pages)
+│   ├── 01_Dossier_Global/      # Compte-rendu maître consolidé (C1 à C8, incluant les BPMN)
+│   ├── 02_Documentation_et_Validation/ # 11 dossiers thématiques PDF (dont Guide Métier 2p & BPMN 2.0)
 │   └── 03_Support_Soutenance/  # Diaporama de soutenance 16:9 (.pptx et .pdf)
 ├── api/                        # API REST FastAPI (main.py : 9 routes, Dockerfile non-root, 61 tests)
 ├── app/                        # Dashboard métier Streamlit (dashboard.py : 6 vues, Dockerfile)
 ├── data/                       # Pipeline de données (generate_data.py, merge_datasets.py, data_dictionary.md)
 ├── db/                         # Base PostgreSQL 15 (init.sql : 4 tables + vue + 11 index, load_data.sh)
-├── docs/                       # Sources Markdown de la documentation et captures d'écran (images/)
+├── docs/                       # Sources Markdown (.md), schémas BPMN 2.0 XML (bpmn/) et visuels (images/)
 ├── grafana/                    # Provisioning YAML automatique + 3 dashboards JSON par rôle métier
 ├── models/                     # Entraînement ML (train_models.py), 5 Model Cards, métriques JSON
 ├── scripts/                    # Scripts de lancement/arrêt 1-clic pour la démo locale (Windows/macOS/Linux)

@@ -1,0 +1,90 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_MECHA_AS_IS" targetNamespace="http://mecha-predict.industrial/bpmn/asis">
+  <bpmn:collaboration id="Collab_AS_IS">
+    <bpmn:participant id="Pool_Usine_ASIS" name="Usine MECHA — Processus Actuel AS-IS (Maintenance Curative et Preventive Calendaire)" processRef="Process_AS_IS"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_AS_IS" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_ASIS">
+      <bpmn:lane id="Lane_Operateur" name="Operateur de Ligne (Atelier CNC)">
+        <bpmn:flowNodeRef>Start_Usinage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Surveillance</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Detection</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_Casse</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AlerteOrale</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Prod" name="Responsable Production">
+        <bpmn:flowNodeRef>Task_ArretSerie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReplanifUrgence</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Maint" name="Technicien Maintenance">
+        <bpmn:flowNodeRef>Task_DiagFroid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Stock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CmdUrgente</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReparationLourde</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SaisieExcel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_PanneSubie</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_Usinage" name="Cycle usinage en cours"/>
+    <bpmn:manualTask id="Task_Surveillance" name="Surveillance visuelle / auditive empirique"/>
+    <bpmn:exclusiveGateway id="Gw_Detection" name="Derive percue a temps ?"/>
+    <bpmn:intermediateCatchEvent id="Event_Casse" name="Casse outil / Arret brutal + Rebuts">
+      <bpmn:timerEventDefinition id="Timer_Casse"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="Task_AlerteOrale" name="Appel telephonique / signalement oral"/>
+    <bpmn:userTask id="Task_ArretSerie" name="Interruption non planifiee du lot client"/>
+    <bpmn:userTask id="Task_ReplanifUrgence" name="Reorganisation urgente LP-A/B/C (impact TRS)"/>
+    <bpmn:manualTask id="Task_DiagFroid" name="Diagnostic manuel sur machine arretee (1-2h)"/>
+    <bpmn:exclusiveGateway id="Gw_Stock" name="Piece en stock ?"/>
+    <bpmn:manualTask id="Task_CmdUrgente" name="Commande express fournisseur (+24 a 48h)"/>
+    <bpmn:manualTask id="Task_ReparationLourde" name="Intervention curative lourde (4h a 16h d'arret)"/>
+    <bpmn:userTask id="Task_SaisieExcel" name="Saisie tardive fiche papier / Excel local"/>
+    <bpmn:endEvent id="End_PanneSubie" name="Remise en route (Cout 3 500 - 8 000 EUR/h)"/>
+
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_Usinage" targetRef="Task_Surveillance"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="Task_Surveillance" targetRef="Gw_Detection"/>
+    <bpmn:sequenceFlow id="F3" name="Non (derive invisible)" sourceRef="Gw_Detection" targetRef="Event_Casse"/>
+    <bpmn:sequenceFlow id="F4" name="Bruit/ chauffe tardive" sourceRef="Gw_Detection" targetRef="Task_AlerteOrale"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="Event_Casse" targetRef="Task_AlerteOrale"/>
+    <bpmn:sequenceFlow id="F6" sourceRef="Task_AlerteOrale" targetRef="Task_ArretSerie"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="Task_ArretSerie" targetRef="Task_ReplanifUrgence"/>
+    <bpmn:sequenceFlow id="F8" sourceRef="Task_ReplanifUrgence" targetRef="Task_DiagFroid"/>
+    <bpmn:sequenceFlow id="F9" sourceRef="Task_DiagFroid" targetRef="Gw_Stock"/>
+    <bpmn:sequenceFlow id="F10" name="Non" sourceRef="Gw_Stock" targetRef="Task_CmdUrgente"/>
+    <bpmn:sequenceFlow id="F11" name="Oui" sourceRef="Gw_Stock" targetRef="Task_ReparationLourde"/>
+    <bpmn:sequenceFlow id="F12" sourceRef="Task_CmdUrgente" targetRef="Task_ReparationLourde"/>
+    <bpmn:sequenceFlow id="F13" sourceRef="Task_ReparationLourde" targetRef="Task_SaisieExcel"/>
+    <bpmn:sequenceFlow id="F14" sourceRef="Task_SaisieExcel" targetRef="End_PanneSubie"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_ASIS">
+    <bpmndi:BPMNPlane id="BPMNPlane_ASIS" bpmnElement="Collab_AS_IS">
+      <bpmndi:BPMNShape id="Shape_Pool_ASIS" bpmnElement="Pool_Usine_ASIS" isHorizontal="true">
+        <dc:Bounds x="80" y="60" width="1360" height="540"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Op" bpmnElement="Lane_Operateur" isHorizontal="true">
+        <dc:Bounds x="110" y="60" width="1330" height="180"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Pr" bpmnElement="Lane_Prod" isHorizontal="true">
+        <dc:Bounds x="110" y="240" width="1330" height="160"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_Ma" bpmnElement="Lane_Maint" isHorizontal="true">
+        <dc:Bounds x="110" y="400" width="1330" height="200"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Start" bpmnElement="Start_Usinage"><dc:Bounds x="170" y="132" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Surv" bpmnElement="Task_Surveillance"><dc:Bounds x="250" y="110" width="150" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_GwDet" bpmnElement="Gw_Detection" isMarkerVisible="true"><dc:Bounds x="445" y="125" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Casse" bpmnElement="Event_Casse"><dc:Bounds x="555" y="92" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Appel" bpmnElement="Task_AlerteOrale"><dc:Bounds x="650" y="110" width="150" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Arret" bpmnElement="Task_ArretSerie"><dc:Bounds x="460" y="280" width="160" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Replan" bpmnElement="Task_ReplanifUrgence"><dc:Bounds x="660" y="280" width="170" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Diag" bpmnElement="Task_DiagFroid"><dc:Bounds x="500" y="460" width="160" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_GwStk" bpmnElement="Gw_Stock" isMarkerVisible="true"><dc:Bounds x="705" y="475" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Cmd" bpmnElement="Task_CmdUrgente"><dc:Bounds x="800" y="415" width="160" height="65"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Rep" bpmnElement="Task_ReparationLourde"><dc:Bounds x="995" y="460" width="165" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Xls" bpmnElement="Task_SaisieExcel"><dc:Bounds x="1195" y="460" width="150" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_End" bpmnElement="End_PanneSubie"><dc:Bounds x="1380" y="482" width="36" height="36"/></bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

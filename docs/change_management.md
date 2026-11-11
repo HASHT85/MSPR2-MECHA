@@ -64,6 +64,14 @@ graph TD
 | **Direction industrielle** | Moyen (reporting) | Faible (supervision) | Faible (vision macro) | ⭐ Faible |
 | **Équipe IT** | Élevé (administration) | Moyen (support nouveau système) | Élevé (Docker, ML, API) | ⭐⭐⭐ Fort |
 
+### 2.3 Transformation des workflows opérationnels (BPMN 2.0 `AS-IS` vs `TO-BE`)
+
+Le passage d'une maintenance curative subie (`AS-IS`) à une maintenance prédictive assistée par IA en mode *Human-in-the-Loop* (`TO-BE`, sources XML normalisées dans `docs/bpmn/`) structure concrètement l'évolution des rôles entre Atelier, Maintenance et Production :
+
+![BPMN 2.0 AS-IS — Workflow historique subi](images/diag_bpmn_asis.png)
+
+![BPMN 2.0 TO-BE — Workflow cible MECHA Predict Human-in-the-Loop](images/diag_bpmn_tobe.png)
+
 ---
 
 ## 3. Axe 1 — INFORMER
