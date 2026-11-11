@@ -75,11 +75,16 @@ def download_ai4i_dataset():
     # Essayer de telecharger depuis UCI
     print("  Tentative de telechargement du dataset AI4I 2020...")
     try:
+        import shutil
         import urllib.request
         import zipfile
 
         zip_path = os.path.join(EXTERNAL_DIR, "ai4i_2020.zip")
-        urllib.request.urlretrieve(AI4I_URL, zip_path)
+        with (
+            urllib.request.urlopen(AI4I_URL, timeout=8) as response,
+            open(zip_path, "wb") as out_file,
+        ):
+            shutil.copyfileobj(response, out_file)
         print("  [OK] Telechargement reussi")
 
         # Extraire le CSV du zip
