@@ -318,7 +318,7 @@ La pipeline GitHub Actions (`.github/workflows/ci.yml`) orchestre automatiquemen
 
 ### 10.1 Guide utilisateur metier synthetique de 2 pages
 
-Conformement aux exigences du sujet (guide metier de 1 a 2 pages destine aux equipes non-data), le document `docs/user_guide.md` (exporte en exactement **2 pages A4** dans `docs/livrables_pdf/07_Guide_Utilisateur_Metier_2pages_C7.pdf`) presente sans jargon algorithmique : l'objectif de l'outil, la navigation dans les 6 vues Streamlit et les 3 vues Grafana, la grille de lecture des codes couleurs (risque et RUL), la procedure d'intervention en 4 etapes et les limites d'usage (*Human-in-the-Loop*).
+Conformement aux exigences du sujet (guide metier de 1 a 2 pages destine aux equipes non-data), le document `docs/user_guide.md` (exporte en exactement **2 pages A4** dans `livrables/02_Documentation_et_Validation/07_Guide_Utilisateur_Metier_2pages_C7.pdf`) presente sans jargon algorithmique : l'objectif de l'outil, la navigation dans les 6 vues Streamlit et les 3 vues Grafana, la grille de lecture des codes couleurs (risque et RUL), la procedure d'intervention en 4 etapes et les limites d'usage (*Human-in-the-Loop*).
 
 ### 10.2 Verification de conformite au cahier des charges TPRE841
 

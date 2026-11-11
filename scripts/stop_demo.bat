@@ -1,5 +1,5 @@
 @echo off
-cd /d "%~dp0"
+cd /d "%~dp0.."
 echo Arret des conteneurs Docker MECHA (si actifs)...
 docker compose down >nul 2>&1
 echo Arret des processus Python locaux FastAPI / Streamlit (si actifs)...

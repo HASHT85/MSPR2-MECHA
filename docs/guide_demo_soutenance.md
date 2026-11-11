@@ -1,24 +1,17 @@
 # Guide de Lancement Local & Scénario de Démo Live — Soutenance MSPR TPRE841
 
-Ce guide explique comment récupérer et lancer toute la solution **MECHA Predict** sur votre propre PC portable avant d'entrer en salle de soutenance, avec un **mode principal Docker complet** et un **Plan B instantané sans Docker** (au cas où Docker Desktop ou le Wi-Fi de l'école poserait problème le jour J).
+Ce guide explique comment récupérer et lancer toute la solution **MECHA Predict** sur votre propre PC portable avant d'entrer en salle de soutenance (depuis un `git clone` ou depuis le **ZIP téléchargé sur GitHub**), avec un **mode principal Docker complet** et un **Plan B instantané sans Docker**.
 
 ---
 
 ## 1. Préparation sur votre PC (à faire une seule fois la veille)
 
-Ouvrez un terminal (**PowerShell** sur Windows, ou **Terminal** sur macOS/Linux) dans votre dossier de travail :
-
-```bash
-git clone https://github.com/HASHT85/MSPR2-MECHA.git
-cd MSPR2-MECHA
-```
-
-*(Si le dépôt est déjà cloné sur votre PC : faites simplement `git checkout main && git pull --prune`.)*
+Récupérez le projet via `git clone https://github.com/HASHT85/MSPR2-MECHA.git` (ou en décompressant le fichier `MSPR2-MECHA-main.zip` téléchargé depuis GitHub).
 
 ### Premier lancement de chauffe (« Warm-up »)
-Lancez le script une première fois chez vous avec une bonne connexion :
-- **Sur Windows** : double-cliquez sur `start_demo.bat` (ou exécutez `.\start_demo.bat` dans PowerShell).
-- **Sur macOS / Linux** : exécutez `./start_demo.sh`.
+Ouvrez le dossier `scripts/` et lancez le script une première fois chez vous :
+- **Sur Windows** : double-cliquez sur `scripts\start_demo.bat` (ou exécutez `.\scripts\start_demo.bat` dans PowerShell).
+- **Sur macOS / Linux** : exécutez `./scripts/start_demo.sh`.
 
 Ce premier lancement réalise automatiquement tout le travail lourd (~2 à 3 minutes la toute première fois) :
 1. Création automatique du fichier `.env` depuis `.env.example`.
@@ -26,7 +19,7 @@ Ce premier lancement réalise automatiquement tout le travail lourd (~2 à 3 min
 3. Entraînement et sauvegarde des **5 modèles ML** (`models/saved_models/*.joblib`).
 4. Construction des images Docker et chargement des 110 000 lignes dans **PostgreSQL 15**.
 
-> **Astuce Jour J** : Une fois ce premier lancement fait la veille, les fichiers CSV, les 5 modèles `.joblib`, les images Docker et la base SQL restent en cache sur votre disque. Le jour de la soutenance, `start_demo.bat` (ou `./start_demo.sh`) démarre en **moins de 10 secondes** et fonctionne **100 % hors-ligne** (aucun besoin d'Internet !).
+> **Astuce Jour J** : Une fois ce premier lancement fait la veille, les fichiers CSV, les 5 modèles `.joblib`, les images Docker et la base SQL restent en cache sur votre disque. Le jour de la soutenance, `scripts\start_demo.bat` (ou `./scripts/start_demo.sh`) démarre en **moins de 10 secondes** et fonctionne **100 % hors-ligne** (aucun besoin d'Internet !).
 
 ---
 
@@ -34,8 +27,8 @@ Ce premier lancement réalise automatiquement tout le travail lourd (~2 à 3 min
 
 ### Option A — Mode Complet Docker (Recommandé : 4 services actifs)
 Assurez-vous que **Docker Desktop** est ouvert, puis :
-- **Windows** : double-clic sur `start_demo.bat`
-- **macOS / Linux** : `./start_demo.sh`
+- **Windows** : double-clic sur `scripts\start_demo.bat`
+- **macOS / Linux** : `./scripts/start_demo.sh`
 
 Vos 3 onglets de démonstration s'ouvrent tout seuls dans le navigateur :
 1. **Application Métier Streamlit (6 vues)** — port `8501`
@@ -44,14 +37,12 @@ Vos 3 onglets de démonstration s'ouvrent tout seuls dans le navigateur :
 
 ### Option B — Plan B Secours Sans Docker (Python direct en 5 secondes)
 Si Docker Desktop refuse de démarrer sur le PC de présentation :
-- **Windows** : `.\start_demo.bat --local` *(note : si Docker Desktop est fermé, double-cliquer sur `start_demo.bat` bascule automatiquement sur ce mode !)*
-- **macOS / Linux** : `./start_demo.sh --local`
-
-Ce mode lance directement **FastAPI** (port `8000`) + **Streamlit 6 vues** (port `8501`) via un environnement Python local `.venv` et ouvre automatiquement les 2 onglets dans votre navigateur.
+- **Windows** : `.\scripts\start_demo.bat --local` *(si Docker Desktop est fermé, double-cliquer sur `scripts\start_demo.bat` bascule automatiquement sur ce mode !)*
+- **macOS / Linux** : `./scripts/start_demo.sh --local`
 
 ### Arrêt propre après la soutenance
-- **Windows** : double-clic sur `stop_demo.bat`
-- **macOS / Linux** : `./stop_demo.sh`
+- **Windows** : double-clic sur `scripts\stop_demo.bat`
+- **macOS / Linux** : `./scripts/stop_demo.sh`
 
 ---
 

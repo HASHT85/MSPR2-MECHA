@@ -2,12 +2,12 @@
 # ==============================================================================
 # MECHA Predict (MSPR TPRE841) — Lancement Demo Soutenance (macOS / Linux)
 # Usage :
-#   ./start_demo.sh           # Mode Docker complet (bascule Python si Docker absent)
-#   ./start_demo.sh --local   # Force le mode Python local sans Docker
+#   ./scripts/start_demo.sh           # Mode Docker complet (bascule Python si Docker absent)
+#   ./scripts/start_demo.sh --local   # Force le mode Python local sans Docker
 # ==============================================================================
 
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 LOCAL_MODE=false
 OPEN_BROWSER=true
@@ -73,7 +73,7 @@ if [ "$USE_DOCKER" = true ]; then
   echo "  - Dashboard Metier Streamlit (6 vues) : http://localhost:8501"
   echo "  - API IA FastAPI (Swagger /docs)      : http://localhost:8000/docs"
   echo "  - Supervision Grafana (admin/changeme): http://localhost:3000"
-  echo "  (Pour tout arreter : ./stop_demo.sh)"
+  echo "  (Pour tout arreter : ./scripts/stop_demo.sh)"
   echo "=============================================================="
 
   open_url "http://localhost:8501"
@@ -120,7 +120,7 @@ else
   echo "  DEMO LOCALE PRETE !"
   echo "  - Dashboard Metier Streamlit (6 vues) : http://localhost:8501"
   echo "  - API IA FastAPI (Swagger /docs)      : http://localhost:8000/docs"
-  echo "  (Pour tout arreter : ./stop_demo.sh)"
+  echo "  (Pour tout arreter : ./scripts/stop_demo.sh)"
   echo "=============================================================="
 
   open_url "http://localhost:8501"

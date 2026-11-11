@@ -4,7 +4,7 @@
 > **Épreuve** : MSPR **TPRE841** — Bloc 4 : *Concevoir et développer des solutions applicatives métier et spécifiques* (`C1` à `C8`)  
 > **Format officiel** : **20 minutes de présentation en équipe** + **30 minutes d'échanges individuels et collectifs avec le jury**  
 > **Équipe (maîtrise croisée intégrale C1–C8)** : Malek El Fayedh, Thibaut Doreau, Vincent Gonçalves, Pierre-Louis Guinel  
-> **Fichiers diaporama associés** : `docs/soutenance_mecha_mspr2.pptx` & `docs/soutenance_mecha_mspr2.pdf` (16 slides 16:9)
+> **Fichiers diaporama associés** : `livrables/03_Support_Soutenance/Support_Soutenance_MECHA_TPRE841.pptx` & `.pdf` (16 slides 16:9)
 
 ---
 

@@ -4,7 +4,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Set-Location -Path $PSScriptRoot
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+Set-Location -Path $RepoRoot
 
 Write-Host "==============================================================" -ForegroundColor Cyan
 Write-Host "  MECHA Predict (MSPR TPRE841) — Lancement Demo Soutenance" -ForegroundColor Cyan
@@ -36,7 +37,7 @@ if ($UseDocker) {
     Write-Host "`n[MODE DOCKER COMPLET] PostgreSQL 15 + FastAPI + Streamlit (6 vues) + Grafana" -ForegroundColor Green
     Write-Host "Construction et demarrage des conteneurs (le 1er lancement genere les 110 000 lignes et entraine les 5 modeles ML)..." -ForegroundColor Gray
 
-    # S'assurer que db/load_data.sh est bien en LF meme sur un clone Windows antérieur
+    # S'assurer que db/load_data.sh est bien en LF meme sur un ZIP / clone Windows
     if (Test-Path "db\load_data.sh") {
         $shContent = [System.IO.File]::ReadAllText((Resolve-Path "db\load_data.sh"))
         if ($shContent.Contains("`r`n")) {
@@ -73,7 +74,7 @@ if ($UseDocker) {
     Write-Host "  - Dashboard Metier Streamlit (6 vues) : http://localhost:8501"
     Write-Host "  - API IA FastAPI (Swagger /docs)      : http://localhost:8000/docs"
     Write-Host "  - Supervision Grafana (admin/changeme): http://localhost:3000"
-    Write-Host "  (Pour tout arreter apres la soutenance : stop_demo.bat)" -ForegroundColor Gray
+    Write-Host "  (Pour tout arreter apres la soutenance : scripts\stop_demo.bat)" -ForegroundColor Gray
     Write-Host "==============================================================" -ForegroundColor Green
 
     if (-not $NoBrowser) {
@@ -95,7 +96,7 @@ else {
         Write-Host "[1/4] Creation de l'environnement virtuel .venv..." -ForegroundColor Gray
         & $PyCmd -m venv .venv
     }
-    $VenvPy = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+    $VenvPy = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 
     Write-Host "[2/4] Verification des dependances Python..." -ForegroundColor Gray
     & $VenvPy -m pip install --quiet --upgrade pip
@@ -116,20 +117,20 @@ else {
         Write-Host "[4/4] Modeles ML deja entraines." -ForegroundColor Gray
     }
 
-    $env:MODEL_PATH = Join-Path $PSScriptRoot "models\saved_models"
+    $env:MODEL_PATH = Join-Path $RepoRoot "models\saved_models"
     $env:API_URL = "http://localhost:8000"
 
     Write-Host "Demarrage de FastAPI (port 8000) et Streamlit (port 8501)..." -ForegroundColor Gray
-    Start-Process -FilePath $VenvPy -ArgumentList "-m uvicorn api.main:app --host 127.0.0.1 --port 8000" -WindowStyle Minimized
+    Start-Process -FilePath $VenvPy -WorkingDirectory $RepoRoot -ArgumentList "-m uvicorn api.main:app --host 127.0.0.1 --port 8000" -WindowStyle Minimized
     Start-Sleep -Seconds 3
-    Start-Process -FilePath $VenvPy -ArgumentList "-m streamlit run app\src\dashboard.py --server.port 8501 --server.headless true --theme.base dark" -WindowStyle Minimized
+    Start-Process -FilePath $VenvPy -WorkingDirectory $RepoRoot -ArgumentList "-m streamlit run app\src\dashboard.py --server.port 8501 --server.headless true --theme.base dark" -WindowStyle Minimized
     Start-Sleep -Seconds 3
 
     Write-Host "`n==============================================================" -ForegroundColor Green
     Write-Host "  DEMO LOCALE PRETE !" -ForegroundColor Green
     Write-Host "  - Dashboard Metier Streamlit (6 vues) : http://localhost:8501"
     Write-Host "  - API IA FastAPI (Swagger /docs)      : http://localhost:8000/docs"
-    Write-Host "  (Pour tout arreter apres la soutenance : stop_demo.bat)" -ForegroundColor Gray
+    Write-Host "  (Pour tout arreter apres la soutenance : scripts\stop_demo.bat)" -ForegroundColor Gray
     Write-Host "==============================================================" -ForegroundColor Green
 
     if (-not $NoBrowser) {

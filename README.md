@@ -194,22 +194,22 @@ MODEL_PATH=models/saved_models pytest --cov=api --cov=models --cov-report=term-m
 
 ## Livrables Documentaires et Exports PDF Prêts à Déposer
 
-Tous les livrables exigés par le sujet **MSPR TPRE841** sont disponibles en version source Markdown et exportés en **PDF paginés prêts à envoyer** :
+Tous les livrables exigés par le sujet **MSPR TPRE841** sont regroupés dans le dossier racine [`livrables/`](livrables/) (ainsi qu'en version source Markdown dans `docs/`) :
 
-| Livrable | Source Markdown | Export PDF prêt à déposer | Compétences |
-|----------|-----------------|---------------------------|:-----------:|
-| **Dossier Global Consolidé** | [`docs/compte_rendu_soutenance.md`](docs/compte_rendu_soutenance.md) | [`docs/compte_rendu_soutenance.pdf`](docs/compte_rendu_soutenance.pdf) | **C1 à C8** |
-| **Support de Soutenance (20 min)** | [`docs/soutenance.md`](docs/soutenance.md) | [`docs/soutenance_mecha_mspr2.pdf`](docs/soutenance_mecha_mspr2.pdf) & [`.pptx`](docs/soutenance_mecha_mspr2.pptx) | **Soutenance** |
-| **01. Entretien Client & Besoins** | [`docs/client_interview.md`](docs/client_interview.md) | [`docs/livrables_pdf/01_Entretien_Client_Besoins_C1.pdf`](docs/livrables_pdf/01_Entretien_Client_Besoins_C1.pdf) | **C1** |
-| **02. Architecture Applicative** | [`docs/architecture.md`](docs/architecture.md) | [`docs/livrables_pdf/02_Architecture_Applicative_C2.pdf`](docs/livrables_pdf/02_Architecture_Applicative_C2.pdf) | **C2, C4** |
-| **03. Choix Techniques & Git** | [`docs/technical_choices.md`](docs/technical_choices.md) | [`docs/livrables_pdf/03_Choix_Techniques_et_Modeles_C2_C3.pdf`](docs/livrables_pdf/03_Choix_Techniques_et_Modeles_C2_C3.pdf) | **C2, C3** |
-| **04. Dictionnaire de Données** | [`data/data_dictionary.md`](data/data_dictionary.md) | [`docs/livrables_pdf/04_Dictionnaire_Donnees_MECHA.pdf`](docs/livrables_pdf/04_Dictionnaire_Donnees_MECHA.pdf) | **C3, C4** |
-| **05. Fiches Modèles (Model Cards)** | [`models/model_cards/`](models/model_cards/) | [`docs/livrables_pdf/05_Fiches_Modeles_ML_Model_Cards_C3.pdf`](docs/livrables_pdf/05_Fiches_Modeles_ML_Model_Cards_C3.pdf) | **C3, C7** |
-| **06. Plan de Tests & Conformité** | [`docs/validation_plan.md`](docs/validation_plan.md) | [`docs/livrables_pdf/06_Plan_Tests_Validation_et_Conformite_C5_C7.pdf`](docs/livrables_pdf/06_Plan_Tests_Validation_et_Conformite_C5_C7.pdf) | **C5, C6, C7** |
-| **07. Guide Utilisateur Métier (2 p.)** | [`docs/user_guide.md`](docs/user_guide.md) | [`docs/livrables_pdf/07_Guide_Utilisateur_Metier_2pages_C7.pdf`](docs/livrables_pdf/07_Guide_Utilisateur_Metier_2pages_C7.pdf) | **C7** |
-| **08. Conduite du Changement** | [`docs/change_management.md`](docs/change_management.md) | [`docs/livrables_pdf/08_Conduite_du_Changement_C8.pdf`](docs/livrables_pdf/08_Conduite_du_Changement_C8.pdf) | **C8** |
-| **09. Analyse RGPD & EU AI Act** | [`docs/rgpd_analysis.md`](docs/rgpd_analysis.md) | [`docs/livrables_pdf/09_Analyse_RGPD_et_EU_AI_Act.pdf`](docs/livrables_pdf/09_Analyse_RGPD_et_EU_AI_Act.pdf) | **C2, C7** |
-| **10. Plan de Déploiement Multi-Sites** | [`docs/deployment_plan.md`](docs/deployment_plan.md) | [`docs/livrables_pdf/10_Plan_Deploiement_Multi_Sites.pdf`](docs/livrables_pdf/10_Plan_Deploiement_Multi_Sites.pdf) | **C4, C8** |
+| Livrable | Source Markdown | Fichier final prêt à déposer (`livrables/`) | Compétences |
+|----------|-----------------|---------------------------------------------|:-----------:|
+| **Dossier Global Consolidé** | [`docs/compte_rendu_soutenance.md`](docs/compte_rendu_soutenance.md) | [`livrables/01_Dossier_Global/00_Compte_Rendu_Global_MSPR_TPRE841_MECHA.pdf`](livrables/01_Dossier_Global/00_Compte_Rendu_Global_MSPR_TPRE841_MECHA.pdf) | **C1 à C8** |
+| **Support de Soutenance (20 min)** | [`docs/soutenance.md`](docs/soutenance.md) | [`livrables/03_Support_Soutenance/Support_Soutenance_MECHA_TPRE841.pptx`](livrables/03_Support_Soutenance/Support_Soutenance_MECHA_TPRE841.pptx) & [`.pdf`](livrables/03_Support_Soutenance/Support_Soutenance_MECHA_TPRE841.pdf) | **Soutenance** |
+| **01. Entretien Client & Besoins** | [`docs/client_interview.md`](docs/client_interview.md) | [`livrables/02_Documentation_et_Validation/01_Entretien_Client_Besoins_C1.pdf`](livrables/02_Documentation_et_Validation/01_Entretien_Client_Besoins_C1.pdf) | **C1** |
+| **02. Architecture Applicative** | [`docs/architecture.md`](docs/architecture.md) | [`livrables/02_Documentation_et_Validation/02_Architecture_Applicative_C2.pdf`](livrables/02_Documentation_et_Validation/02_Architecture_Applicative_C2.pdf) | **C2, C4** |
+| **03. Choix Techniques & Git** | [`docs/technical_choices.md`](docs/technical_choices.md) | [`livrables/02_Documentation_et_Validation/03_Choix_Techniques_et_Modeles_C2_C3.pdf`](livrables/02_Documentation_et_Validation/03_Choix_Techniques_et_Modeles_C2_C3.pdf) | **C2, C3** |
+| **04. Dictionnaire de Données** | [`data/data_dictionary.md`](data/data_dictionary.md) | [`livrables/02_Documentation_et_Validation/04_Dictionnaire_Donnees_MECHA.pdf`](livrables/02_Documentation_et_Validation/04_Dictionnaire_Donnees_MECHA.pdf) | **C3, C4** |
+| **05. Fiches Modèles (Model Cards)** | [`models/model_cards/`](models/model_cards/) | [`livrables/02_Documentation_et_Validation/05_Fiches_Modeles_ML_Model_Cards_C3.pdf`](livrables/02_Documentation_et_Validation/05_Fiches_Modeles_ML_Model_Cards_C3.pdf) | **C3, C7** |
+| **06. Plan de Tests & Conformité** | [`docs/validation_plan.md`](docs/validation_plan.md) | [`livrables/02_Documentation_et_Validation/06_Plan_Tests_Validation_et_Conformite_C5_C7.pdf`](livrables/02_Documentation_et_Validation/06_Plan_Tests_Validation_et_Conformite_C5_C7.pdf) | **C5, C6, C7** |
+| **07. Guide Utilisateur Métier (2 p.)** | [`docs/user_guide.md`](docs/user_guide.md) | [`livrables/02_Documentation_et_Validation/07_Guide_Utilisateur_Metier_2pages_C7.pdf`](livrables/02_Documentation_et_Validation/07_Guide_Utilisateur_Metier_2pages_C7.pdf) | **C7** |
+| **08. Conduite du Changement** | [`docs/change_management.md`](docs/change_management.md) | [`livrables/02_Documentation_et_Validation/08_Conduite_du_Changement_C8.pdf`](livrables/02_Documentation_et_Validation/08_Conduite_du_Changement_C8.pdf) | **C8** |
+| **09. Analyse RGPD & EU AI Act** | [`docs/rgpd_analysis.md`](docs/rgpd_analysis.md) | [`livrables/02_Documentation_et_Validation/09_Analyse_RGPD_et_EU_AI_Act.pdf`](livrables/02_Documentation_et_Validation/09_Analyse_RGPD_et_EU_AI_Act.pdf) | **C2, C7** |
+| **10. Plan de Déploiement Multi-Sites** | [`docs/deployment_plan.md`](docs/deployment_plan.md) | [`livrables/02_Documentation_et_Validation/10_Plan_Deploiement_Multi_Sites.pdf`](livrables/02_Documentation_et_Validation/10_Plan_Deploiement_Multi_Sites.pdf) | **C4, C8** |
 
 ---
 
@@ -217,17 +217,21 @@ Tous les livrables exigés par le sujet **MSPR TPRE841** sont disponibles en ver
 
 ```text
 MSPR2-MECHA/
+├── livrables/                  # Dossier prêt à rendre au jury (PDF A4 paginés & support PowerPoint)
+│   ├── 01_Dossier_Global/      # Compte-rendu maître consolidé (C1 à C8)
+│   ├── 02_Documentation_et_Validation/ # 10 dossiers thématiques PDF (dont le Guide Métier 2 pages)
+│   └── 03_Support_Soutenance/  # Diaporama de soutenance 16:9 (.pptx et .pdf)
 ├── api/                        # API REST FastAPI (main.py : 9 routes, Dockerfile non-root, 61 tests)
 ├── app/                        # Dashboard métier Streamlit (dashboard.py : 6 vues, Dockerfile)
 ├── data/                       # Pipeline de données (generate_data.py, merge_datasets.py, data_dictionary.md)
 ├── db/                         # Base PostgreSQL 15 (init.sql : 4 tables + vue + 11 index, load_data.sh)
-├── docs/                       # Documentation complète, schémas PNG, livrables PDF et support PPTX/PDF
-│   ├── images/                 # Diagrammes d'architecture et captures d'écran réelles (Streamlit & Grafana)
-│   └── livrables_pdf/          # 10 livrables individuels exportés en PDF A4 prêts à transmettre
+├── docs/                       # Sources Markdown de la documentation et captures d'écran (images/)
 ├── grafana/                    # Provisioning YAML automatique + 3 dashboards JSON par rôle métier
 ├── models/                     # Entraînement ML (train_models.py), 5 Model Cards, métriques JSON
+├── scripts/                    # Scripts de lancement/arrêt 1-clic pour la démo locale (Windows/macOS/Linux)
 ├── tests/                      # Suites de tests transverses (qualité données, modèles ML, intégration)
 ├── .github/workflows/ci.yml    # Pipeline CI/CD GitHub Actions (Lint Ruff -> Data/ML/104 Tests -> Build Docker)
 ├── docker-compose.yml          # Orchestration reproductible (init-pipeline + db + api + dashboard + grafana)
+├── requirements.txt            # Dépendances Python globales
 └── ruff.toml                   # Configuration standardisée du linter et formateur Python
 ```
