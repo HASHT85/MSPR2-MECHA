@@ -91,6 +91,16 @@ def api_post(path, payload):
         return None
 
 
+def api_put(path, payload):
+    """PUT sur l'API. Retourne le JSON ou None si l'API est injoignable."""
+    try:
+        resp = requests.put(f"{API_URL}{path}", json=payload, timeout=API_TIMEOUT)
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException:
+        return None
+
+
 @st.cache_data(ttl=60)
 def api_health():
     """Etat de l'API (cache 60 s)."""
@@ -1488,6 +1498,372 @@ def page_modele(df):
     """)
 
 
+DEFAULT_FIELD_FEEDBACK = [
+    {
+        "horodatage": "2026-05-28 09:15",
+        "usine": "Lyon (FR)",
+        "machine_id": 5,
+        "profil_intervenant": "Technicien Maintenance (Equipe A)",
+        "decision": "Intervention planifiee (Vrai positif)",
+        "observation": "Roulement broche confirme en debut d'echauffement (98.4 C). Remplacement planifie au changement d'equipe.",
+    },
+    {
+        "horodatage": "2026-05-29 14:40",
+        "usine": "Lyon (FR)",
+        "machine_id": 8,
+        "profil_intervenant": "Operateur Ligne LP-B",
+        "decision": "Surveillance renforcee",
+        "observation": "Vibration transitoire lors d'un lot Acier dur. Maintien sous controle visuel a 30 min.",
+    },
+    {
+        "horodatage": "2026-05-30 11:05",
+        "usine": "Toulouse (FR)",
+        "machine_id": 12,
+        "profil_intervenant": "Ref. Maintenance Pilote",
+        "decision": "Fausse alerte (Faux positif)",
+        "observation": "Pic thermique lie au cycle de purge capteur apres nettoyage atelier.",
+    },
+]
+
+
+def _feedback_file_path():
+    """Retourne un chemin inscriptible pour persister les retours terrain."""
+    candidates = [
+        "/app/data/processed/feedback_terrain.json",
+        os.path.join(
+            os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            ),
+            "data",
+            "processed",
+            "feedback_terrain.json",
+        ),
+    ]
+    for path in candidates:
+        parent = os.path.dirname(path)
+        if os.path.isdir(parent) and os.access(parent, os.W_OK):
+            return path
+    return None
+
+
+def load_field_feedback():
+    """Charge l'historique anonymise des qualifications terrain (Human-in-the-Loop)."""
+    if "feedback_terrain" in st.session_state:
+        return st.session_state["feedback_terrain"]
+    path = _feedback_file_path()
+    if path and os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                st.session_state["feedback_terrain"] = data
+                return data
+        except (OSError, json.JSONDecodeError):
+            pass
+    st.session_state["feedback_terrain"] = list(DEFAULT_FIELD_FEEDBACK)
+    return st.session_state["feedback_terrain"]
+
+
+def save_field_feedback(entry):
+    """Enregistre un retour terrain sans donnee personnelle (conforme RGPD)."""
+    items = load_field_feedback()
+    items.insert(0, entry)
+    st.session_state["feedback_terrain"] = items
+    path = _feedback_file_path()
+    if path:
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(items, f, indent=2, ensure_ascii=False)
+        except OSError:
+            pass
+
+
+def page_accompagnement(df):
+    """Vue Accompagnement Metier (C8) & Parametrage Applicatif (C4)."""
+
+    st.markdown(
+        """
+    <div class="main-header">
+        <h1>Accompagnement Metier & Parametrage - MECHA</h1>
+        <p>Outil operationnel de conduite du changement (C8), validation Human-in-the-Loop et parametrage des seuils (C4)</p>
+    </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    tab_hitl, tab_guide, tab_config = st.tabs(
+        [
+            "Qualification Terrain (Human-in-the-Loop)",
+            "Fiches Reflexes & Deploiement C8",
+            "Parametrage Seuils API (C4)",
+        ]
+    )
+
+    with tab_hitl:
+        feedbacks = load_field_feedback()
+        nb_total = len(feedbacks)
+        nb_vp = sum(1 for item in feedbacks if "Vrai positif" in item["decision"])
+        taux_pertinence = (nb_vp / nb_total * 100) if nb_total else 0.0
+
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            render_metric_card(
+                "Retours Terrain Saisis", str(nb_total), "Boucle C8 active"
+            )
+        with c2:
+            render_metric_card(
+                "Alertes Confirmees",
+                f"{taux_pertinence:.0f}%",
+                f"{nb_vp}/{nb_total} interventions",
+                "success",
+            )
+        with c3:
+            render_metric_card(
+                "Sites Pilotes Actifs", "2 / 5", "Lyon & Toulouse", "primary"
+            )
+        with c4:
+            render_metric_card(
+                "Mode Decisionnel", "Humain", "EU AI Act Art. 14", "warning"
+            )
+
+        st.markdown("---")
+        col_form, col_hist = st.columns([1, 1.4])
+
+        with col_form:
+            st.subheader("Qualifier une recommandation IA")
+            st.caption(
+                "Aucune donnee nominative n'est collectee (trace par fonction metier uniquement - conformite RGPD)."
+            )
+            with st.form("form_feedback_terrain", clear_on_submit=True):
+                usine_sel = st.selectbox(
+                    "Site industriel",
+                    list(USINE_NOMS.keys()),
+                    format_func=lambda k: USINE_NOMS[k],
+                )
+                machines_site = sorted(
+                    df[df["usine_id"] == usine_sel]["machine_id"].unique().tolist()
+                )
+                machine_sel = st.selectbox(
+                    "Machine concernee", machines_site if machines_site else [1]
+                )
+                profil_sel = st.selectbox(
+                    "Fonction intervenant (anonyme)",
+                    [
+                        "Operateur de ligne",
+                        "Technicien Maintenance",
+                        "Referent Pilote IA",
+                        "Responsable Production",
+                    ],
+                )
+                decision_sel = st.selectbox(
+                    "Qualification apres verification physique",
+                    [
+                        "Intervention planifiee (Vrai positif)",
+                        "Surveillance renforcee",
+                        "Fausse alerte (Faux positif)",
+                    ],
+                )
+                obs_sel = st.text_area(
+                    "Observation technique terrain",
+                    placeholder="Ex: Controle vibratoire palier avant confirme, remplacement programme...",
+                )
+                submitted = st.form_submit_button("Enregistrer le retour terrain")
+                if submitted:
+                    save_field_feedback(
+                        {
+                            "horodatage": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "usine": USINE_NOMS[usine_sel],
+                            "machine_id": int(machine_sel),
+                            "profil_intervenant": profil_sel,
+                            "decision": decision_sel,
+                            "observation": obs_sel.strip()
+                            or "Verification terrain effectuee selon fiche reflexe.",
+                        }
+                    )
+                    st.success(
+                        "Retour terrain enregistre. Il sera integre au suivi d'adoption et au re-entrainement trimestriel."
+                    )
+                    st.rerun()
+
+        with col_hist:
+            st.subheader("Journal des qualifications terrain")
+            st.dataframe(
+                pd.DataFrame(load_field_feedback()),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    with tab_guide:
+        col_role, col_plan = st.columns([1, 1.2])
+        with col_role:
+            st.subheader("Fiche reflexe interactive par metier")
+            role = st.radio(
+                "Selectionnez votre profil",
+                [
+                    "Operateur de ligne",
+                    "Technicien de maintenance",
+                    "Responsable site / production",
+                ],
+                horizontal=True,
+            )
+            if role == "Operateur de ligne":
+                st.info(
+                    "**1. Consultation (2 min / prise de poste)** : Ouvrir la vue *Site* et verifier les machines en statut *Critique*.\n\n"
+                    "**2. Seuils d'action immediate** : Si temperature > 100 C ou vibration > 70 mm/s, controler visuellement l'usinage et prevenir le technicien referent.\n\n"
+                    "**3. Regle d'or** : L'IA ne declenche jamais d'arret automatique ; votre constat terrain reste souverain."
+                )
+            elif role == "Technicien de maintenance":
+                st.info(
+                    "**1. Diagnostic** : Ouvrir la vue *Machine*, consulter la probabilite de panne (seuil 50%), le RUL en minutes (`urgent < 50 min`, `soon < 150 min`) et le score d'anomalie.\n\n"
+                    "**2. Priorisation GMAO** : Planifier en priorite les machines cumulant `maintenance_required` + `RUL < 150 min`.\n\n"
+                    "**3. Boucle d'amelioration** : Renseigner l'onglet *Qualification Terrain* apres intervention pour affiner le modele."
+                )
+            else:
+                st.info(
+                    "**1. Pilotage quotidien** : Consulter la vue *Groupe* et les 3 dashboards Grafana (*DG*, *Usine*, *Technicien*).\n\n"
+                    "**2. Arbitrage production / maintenance** : Utiliser le RUL estime pour caler les arrets preventifs hors pics de charge client.\n\n"
+                    "**3. Suivi conduite du changement** : Animer le point hebdomadaire de 15 min avec les referents terrain."
+                )
+
+        with col_plan:
+            st.subheader("Suivi outille du plan de changement (4 axes & Bridges)")
+            df_c8 = pd.DataFrame(
+                [
+                    {
+                        "Phase": "Phase 1 - Pilote (M1-M3)",
+                        "Sites": "Lyon (10 machines)",
+                        "Transition Bridges": "Fin des habitudes -> Zone neutre",
+                        "Axe dominant": "Informer & Former (2 referents)",
+                        "Statut": "Actif (Pilote)",
+                    },
+                    {
+                        "Phase": "Phase 2 - Extension FR (M4-M6)",
+                        "Sites": "Toulouse, Nantes (20 machines)",
+                        "Transition Bridges": "Zone neutre -> Nouveau depart",
+                        "Axe dominant": "Faire participer (co-ajustement seuils)",
+                        "Statut": "En preparation",
+                    },
+                    {
+                        "Phase": "Phase 3 - Deploiement ES (M7-M9)",
+                        "Sites": "Barcelone, Madrid (20 machines)",
+                        "Transition Bridges": "Ancrage multi-sites FR/ES",
+                        "Axe dominant": "Communiquer & Former (supports ES)",
+                        "Statut": "Planifie",
+                    },
+                    {
+                        "Phase": "Phase 4 - Industrialisation (M10-M12)",
+                        "Sites": "Groupe complet (50 machines)",
+                        "Transition Bridges": "Nouveau depart consolide",
+                        "Axe dominant": "Amelioration continue & GMAO",
+                        "Statut": "Cible M12",
+                    },
+                ]
+            )
+            st.dataframe(df_c8, use_container_width=True, hide_index=True)
+
+    with tab_config:
+        st.subheader("Parametrage dynamique des seuils metier via API REST (C4)")
+        st.caption(
+            "Interagit en direct avec `GET /alerts/config` et `PUT /alerts/config` sans recompilation ni arret de service."
+        )
+        current_cfg = api_get("/alerts/config")
+        if current_cfg is None:
+            st.warning(
+                f"API IA non joignable sur `{API_URL}` : affichage des seuils par defaut MECHA."
+            )
+            current_cfg = {
+                "temperature_critical_celsius": float(SEUILS["temp_critique"]),
+                "rebuts_max_percent": float(SEUILS["rebuts_max"]),
+                "trs_min_percent": float(SEUILS["trs_min"]),
+                "cycle_deviation_max_percent": 15.0,
+                "anomaly_rate_max_percent": float(SEUILS["anomaly_max"]),
+            }
+
+        with st.form("form_alert_config"):
+            col_a, col_b, col_c = st.columns(3)
+            with col_a:
+                new_temp = st.number_input(
+                    "Seuil Temperature Critique (C)",
+                    min_value=50.0,
+                    max_value=200.0,
+                    value=float(current_cfg.get("temperature_critical_celsius", 100.0)),
+                    step=1.0,
+                )
+                new_trs = st.number_input(
+                    "Seuil TRS Minimum (%)",
+                    min_value=10.0,
+                    max_value=100.0,
+                    value=float(current_cfg.get("trs_min_percent", 75.0)),
+                    step=1.0,
+                )
+            with col_b:
+                new_rebuts = st.number_input(
+                    "Taux de Rebuts Max (%)",
+                    min_value=0.1,
+                    max_value=50.0,
+                    value=float(current_cfg.get("rebuts_max_percent", 3.0)),
+                    step=0.5,
+                )
+                new_cycle = st.number_input(
+                    "Derive Temps de Cycle Max (%)",
+                    min_value=1.0,
+                    max_value=100.0,
+                    value=float(current_cfg.get("cycle_deviation_max_percent", 15.0)),
+                    step=1.0,
+                )
+            with col_c:
+                new_anom = st.number_input(
+                    "Taux d'Anomalies Max (%)",
+                    min_value=1.0,
+                    max_value=100.0,
+                    value=float(current_cfg.get("anomaly_rate_max_percent", 10.0)),
+                    step=1.0,
+                )
+            apply_cfg = st.form_submit_button("Mettre a jour les seuils sur l'API")
+            if apply_cfg:
+                updated = api_put(
+                    "/alerts/config",
+                    {
+                        "temperature_critical_celsius": new_temp,
+                        "rebuts_max_percent": new_rebuts,
+                        "trs_min_percent": new_trs,
+                        "cycle_deviation_max_percent": new_cycle,
+                        "anomaly_rate_max_percent": new_anom,
+                    },
+                )
+                if updated:
+                    SEUILS["temp_critique"] = new_temp
+                    SEUILS["rebuts_max"] = new_rebuts
+                    SEUILS["trs_min"] = new_trs
+                    SEUILS["anomaly_max"] = new_anom
+                    st.success(
+                        f"Seuils mis a jour a chaud via PUT /alerts/config ({updated.get('updated_at', '')})."
+                    )
+                else:
+                    st.error("Impossible de joindre PUT /alerts/config.")
+
+        st.markdown("#### Regles de transformation des scores IA en niveaux d'action")
+        df_rules = pd.DataFrame(
+            [
+                {
+                    "Indicateur IA": "Probabilite de panne (Random Forest / XGBoost)",
+                    "Plage": "p < 0.30 | 0.30-0.60 | 0.60-0.85 | >= 0.85",
+                    "Qualification Metier": "low | medium | high | critical (seuil binaire configurable : 0.50)",
+                },
+                {
+                    "Indicateur IA": "Duree de vie restante RUL (RF Regressor)",
+                    "Plage": "< 50 min | 50-150 min | 150-300 min | >= 300 min",
+                    "Qualification Metier": "urgent | soon | moderate | safe",
+                },
+                {
+                    "Indicateur IA": "Score d'atypicite (Isolation Forest)",
+                    "Plage": "score < -0.30 | -0.30 a -0.15 | -0.15 a 0 | >= 0",
+                    "Qualification Metier": "critical | high | medium | low",
+                },
+            ]
+        )
+        st.dataframe(df_rules, use_container_width=True, hide_index=True)
+
+
 # ==============================================================================
 # APPLICATION PRINCIPALE
 # ==============================================================================
@@ -1495,6 +1871,19 @@ def page_modele(df):
 
 def main():
     apply_custom_css()
+
+    nav_options = [
+        "Groupe",
+        "Site",
+        "Machine",
+        "Alertes",
+        "Modele IA",
+        "Accompagnement",
+    ]
+    requested_page = st.query_params.get("page", "Groupe")
+    default_idx = (
+        nav_options.index(requested_page) if requested_page in nav_options else 0
+    )
 
     # Sidebar
     with st.sidebar:
@@ -1504,8 +1893,8 @@ def main():
 
         page = st.radio(
             "Navigation",
-            ["Groupe", "Site", "Machine", "Alertes", "Modele IA"],
-            index=0,
+            nav_options,
+            index=default_idx,
         )
 
         st.markdown("---")
@@ -1519,7 +1908,7 @@ def main():
 
         st.markdown("---")
         st.markdown("### A propos")
-        st.caption("MSPR 2 - Bloc 4")
+        st.caption("MSPR 2 - Bloc 4 (TPRE841)")
         st.caption("Equipe MECHA")
         st.caption(f"Derniere maj: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
@@ -1558,6 +1947,8 @@ def main():
         page_alertes(df)
     elif page == "Modele IA":
         page_modele(df)
+    elif page == "Accompagnement":
+        page_accompagnement(df)
 
 
 if __name__ == "__main__":

@@ -37,12 +37,13 @@ Predire si une machine necessite une intervention de maintenance (`maintenance_r
 ## Donnees d'Entrainement
 
 ### Source
-- **Dataset** : `mecha_dataset_processed.csv`
-- **Volume** : ~100,000 lignes de mesures capteurs IoT
-- **Periode** : Donnees temporelles (2025)
+- **Dataset** : `mecha_dataset_processed.csv` (simulation MECHA + jeu public UCI AI4I 2020)
+- **Volume** : 110 000 lignes de mesures capteurs IoT (88 000 train / 22 000 test)
+- **Usines** : 5 sites MECHA (3 en France : Lyon, Toulouse, Nantes ; 2 en Espagne : Barcelone, Madrid)
+- **Periode** : Donnees temporelles (Janvier - Mars 2025)
 
 ### Split des donnees
-- **Methode** : Split temporel 80/20 (identique au Random Forest)
+- **Methode** : Split temporel 80/20 par source de donnees (identique au Random Forest)
 - **Justification** : Coherence dans la comparaison des modeles
 
 ### Features utilisees (10, capteurs uniquement)
@@ -97,13 +98,13 @@ Predire si une machine necessite une intervention de maintenance (`maintenance_r
 > Les metriques exactes sont generees automatiquement lors de l'entrainement
 > et sauvegardees dans `models/evaluation/results/xgboost_metrics.json`.
 
-| Metrique | Description |
-|----------|-------------|
-| **Accuracy** | Taux de predictions correctes |
-| **Precision** | Ratio vrais positifs / (vrais positifs + faux positifs) |
-| **Recall** | Ratio vrais positifs / (vrais positifs + faux negatifs) |
-| **F1-Score** | Moyenne harmonique precision/recall |
-| **AUC-ROC** | Aire sous la courbe ROC |
+| Metrique | Valeur sur jeu de test (n = 22 000) | Description |
+|----------|:-----------------------------------:|-------------|
+| **Accuracy** | **98.05 %** | Taux de predictions correctes |
+| **Precision** | **74.76 %** | Ratio vrais positifs / (vrais positifs + faux positifs) |
+| **Recall** | **88.64 %** | Ratio vrais positifs / (vrais positifs + faux negatifs) |
+| **F1-Score** | **81.11 %** | Moyenne harmonique precision/recall (83.1 % sur MECHA simule) |
+| **AUC-ROC** | **98.83 %** | Aire sous la courbe ROC |
 
 ### Avantages de XGBoost vs Random Forest
 - Meilleure gestion des interactions complexes entre features

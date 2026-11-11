@@ -537,7 +537,62 @@ def merge_datasets():
         f"-> {df_merged[df_merged['data_source'] == 'AI4I_2020_real']['timestamp'].max()}"
     )
 
-    # 5. Sauvegarder
+    # 5. Typage strict des entiers (compatibilite PostgreSQL \COPY INTEGER)
+    # Sans Int64 nullable, pandas exporte rotational_speed_rpm/tool_wear_min en "2636.0"
+    ordered_columns = [
+        "timestamp",
+        "machine_id",
+        "usine_id",
+        "usine_nom",
+        "usine_pays",
+        "ligne_production",
+        "type_piece",
+        "machine_profile",
+        "temperature",
+        "vibration",
+        "humidity",
+        "pressure",
+        "energy_consumption",
+        "machine_status",
+        "anomaly_flag",
+        "predicted_remaining_life",
+        "failure_type",
+        "maintenance_required",
+        "maintenance_type",
+        "temp_rolling_10min",
+        "temp_trend_1h",
+        "vibr_rolling_10min",
+        "temp_std_30min",
+        "energy_vibr_ratio",
+        "downtime_risk",
+        "data_source",
+        "torque_nm",
+        "rotational_speed_rpm",
+        "tool_wear_min",
+        "product_quality",
+    ]
+    int_columns = [
+        "machine_id",
+        "machine_status",
+        "anomaly_flag",
+        "predicted_remaining_life",
+        "maintenance_required",
+        "rotational_speed_rpm",
+        "tool_wear_min",
+    ]
+    for col in int_columns:
+        if col in df_merged.columns:
+            df_merged[col] = (
+                pd.to_numeric(df_merged[col], errors="coerce").round().astype("Int64")
+            )
+        if col in df_ai4i.columns:
+            df_ai4i[col] = (
+                pd.to_numeric(df_ai4i[col], errors="coerce").round().astype("Int64")
+            )
+
+    df_merged = df_merged[ordered_columns]
+
+    # 6. Sauvegarder
     os.makedirs(RAW_DIR, exist_ok=True)
     os.makedirs(PROCESSED_DIR, exist_ok=True)
 

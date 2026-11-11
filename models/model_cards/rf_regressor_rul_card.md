@@ -41,9 +41,10 @@ Estimer la valeur de `predicted_remaining_life` a partir des mesures capteurs (t
 ## Donnees d'Entrainement
 
 ### Source
-- **Dataset** : `mecha_dataset_processed.csv`
-- **Volume** : ~100,000 lignes
-- **Variable cible** : `predicted_remaining_life`
+- **Dataset** : `mecha_dataset_processed.csv` (simulation MECHA + jeu public UCI AI4I 2020)
+- **Volume** : 110 000 lignes (88 000 train / 22 000 test)
+- **Usines** : 5 sites MECHA (3 en France, 2 en Espagne)
+- **Variable cible** : `predicted_remaining_life` (0 a 500 minutes)
 
 ### Split des donnees
 - **Methode** : Split temporel 80/20 par source de donnees
@@ -91,12 +92,12 @@ Estimer la valeur de `predicted_remaining_life` a partir des mesures capteurs (t
 
 ### Metriques de regression
 
-| Metrique | Description |
-|----------|-------------|
-| **MAE** | Mean Absolute Error - erreur absolue moyenne |
-| **RMSE** | Root Mean Squared Error - racine de l'erreur quadratique moyenne |
-| **R2 Score** | Coefficient de determination (1 = parfait, 0 = modele naif) |
-| **MSE** | Mean Squared Error |
+| Metrique | Valeur sur jeu de test (n = 22 000) | Description |
+|----------|:-----------------------------------:|-------------|
+| **MAE** | **26.94 min** | Mean Absolute Error - erreur absolue moyenne sur echelle 0-500 min |
+| **RMSE** | **46.36 min** | Root Mean Squared Error - racine de l'erreur quadratique moyenne |
+| **R2 Score** | **0.7189 (71.9 %)** | Coefficient de determination (1 = parfait, 0 = modele naif) |
+| **MSE** | **2149.08 min²** | Mean Squared Error |
 
 ### Interpretation
 - **MAE** : En moyenne, l'erreur de prediction en **minutes** (echelle 0-500 min du jeu de donnees). Resultat : 26.9 min (R2 = 0.72)

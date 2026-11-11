@@ -44,8 +44,8 @@ Detecter les comportements anormaux des machines (anomalies capteurs) qui pourra
 ## Donnees d'Entrainement
 
 ### Source
-- **Dataset** : `mecha_dataset_processed.csv`
-- **Volume** : ~80,000 lignes (80% du dataset, split temporel)
+- **Dataset** : `mecha_dataset_processed.csv` (simulation MECHA + jeu public UCI AI4I 2020)
+- **Volume** : 88 000 lignes d'entrainement / 22 000 lignes de test (split temporel 80/20 sur 110 000 lignes, 5 sites FR/ES)
 - **Particularite** : Entrainement NON supervise (pas de variable cible)
 
 ### Features utilisees (10, capteurs uniquement)
@@ -78,14 +78,14 @@ La valeur de `contamination=0.05` est une estimation. Le taux reel de maintenanc
 
 ### Metriques principales
 
-| Metrique | Description |
-|----------|-------------|
-| **Accuracy** | Correspondance anomalies detectees vs maintenance reelle |
-| **Precision** | Parmi les anomalies detectees, combien correspondent a une maintenance |
-| **Recall** | Parmi les maintenances reelles, combien ont ete detectees comme anomalies |
-| **F1-Score** | Moyenne harmonique |
-| **AUC-ROC** | Basee sur le decision_function |
-| **Contamination effective** | Taux reel d'anomalies detectees |
+| Metrique | Valeur sur jeu de test (n = 22 000) | Description |
+|----------|:-----------------------------------:|-------------|
+| **Accuracy** | **92.98 %** | Correspondance anomalies detectees vs maintenance reelle |
+| **Precision** | **29.36 %** | Parmi les 1 226 anomalies detectees, part correspondant a une maintenance |
+| **Recall** | **34.65 %** | Parmi les maintenances reelles, part detectee sans supervision |
+| **F1-Score** | **31.79 %** | Moyenne harmonique (coherente pour un detecteur d'atypicite non supervise) |
+| **AUC-ROC** | **83.86 %** | Discrimination sur le score continu `decision_function` |
+| **Contamination effective** | **5.57 % (1 226 / 22 000)** | Taux reel d'anomalies signalees sur le jeu de test |
 
 ### Interpretation des metriques
 Etant un modele non supervise, les metriques de classification sont calculees a posteriori en comparant les anomalies detectees avec `maintenance_required`. Un faible F1-Score n'indique pas necessairement un mauvais modele : les anomalies capteurs ne correspondent pas toujours a un besoin de maintenance.

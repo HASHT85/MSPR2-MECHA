@@ -34,6 +34,33 @@
 | Vincent Gonçalves | Développeur Full Stack | Questions architecture et interfaces |
 | Pierre-Louis Guinel | Data Scientist | Questions modèles ML et prédictions |
 
+### 1.3 Continuité `MSPR TPRE831` et méthodologie de retranscription (Critère C1)
+
+Cet entretien s'inscrit dans la continuité directe du premier PoC validé par la Direction Générale lors de la **MSPR TPRE831**, afin de passer du cadrage exploratoire à la réalisation d'un prototype opérationnel intégré.
+
+Conformément aux bonnes pratiques d'ingénierie des exigences, la collecte et la retranscription suivent un protocole structuré en **4 étapes** :
+1. **Double prise de notes croisée** (animateur + binôme technique) structurée selon une grille thématique à **5 axes (`A` à `E`)** couvrant l'organisation, le métier maintenance, les irritants, les attentes fonctionnelles et les contraintes SI/RGPD.
+2. **Codage et traçabilité formelle** : chaque verbatim client (`A1`..`E6`) est relié par identifiant unique aux **Besoins Fonctionnels (`BF-01` à `BF-10`)**, **Besoins Non Fonctionnels (`BNF-01` à `BNF-07`)** et **Contraintes (`CO-01` à `CO-06`)**.
+3. **Synthèse tabulaire et priorisation MoSCoW** (*Must / Should / Could / Won't*) validée contradictoirement avec le client sous 72h.
+4. **Restitution graphique** de la répartition actuelle des maintenances et de la pondération des besoins exprimés :
+
+```mermaid
+flowchart LR
+    subgraph " Diagnostic initial MECHA (Verbatims B2 & C1) "
+        M1["Maintenance curative subie : 60 %<br/>(8 a 12 pannes majeures/mois, ~480 k€/an)"]
+        M2["Maintenance preventive calendaire : 35 %<br/>(remplacements parfois prematures)"]
+        M3["Maintenance conditionnelle : 5 %<br/>(seuils fixes sur quelques machines)"]
+    end
+    subgraph " Cible Prototype MECHA Predict (MoSCoW) "
+        T1["11 exigences MUST (65 %)<br/>Prediction IA, RUL min, Alertes, Securite/RGPD"]
+        T2["4 exigences SHOULD (24 %)<br/>Planification, Reporting, Bilinguisme FR/ES"]
+        T3["2 exigences COULD (11 %)<br/>Connecteur GMAO automatique Phase 4"]
+    end
+    M1 --> T1
+    M2 --> T1
+    M3 --> T2
+```
+
 ---
 
 ## 2. Guide d'entretien (questionnaire structuré)
@@ -319,36 +346,36 @@
 
 | Besoin | Priorité (MoSCoW) | Fonctionnalité proposée | Composant technique |
 |--------|:------------------:|------------------------|-------------------|
-| BF-01 — Surveillance temps réel | **Must** | Dashboard avec vue machine temps réel | Grafana + capteurs MQTT |
-| BF-02 — Prédiction pannes 48h | **Must** | Modèle Random Forest de classification | scikit-learn + cron job |
-| BF-03 — Estimation RUL | **Must** | Modèle XGBoost de régression | scikit-learn + FastAPI |
-| BF-04 — Alertes automatiques | **Must** | Système d'alerting multi-canal | FastAPI + notifications (email/push) |
-| BF-05 — Dashboard simple par site | **Must** | Tableau de bord Streamlit par usine | Streamlit + PostgreSQL |
-| BF-06 — Planification maintenance | **Should** | Module de planification intégré | Streamlit + PostgreSQL |
-| BF-07 — Reporting direction | **Should** | Rapports PDF automatiques mensuels | Python (reportlab) + cron |
-| BF-08 — Historisation | **Must** | Base de données avec rétention 2 ans | PostgreSQL (tables prédictions, maintenances) |
-| BF-09 — Suivi alertes | **Must** | Workflow d'acquittement des alertes | FastAPI + Streamlit |
-| BF-10 — Bilinguisme FR/ES | **Should** | Internationalisation de l'interface | i18n Streamlit + Grafana |
-| BNF-01 — Disponibilité 99.5% | **Must** | Architecture conteneurisée avec health checks | Docker + monitoring |
-| BNF-03 — Hébergement Europe | **Must** | Serveurs en France (OVH/Scaleway) | Docker sur VPS européen |
-| BNF-04 — Traçabilité | **Must** | Journalisation des accès et actions | Middleware FastAPI + logs |
-| BNF-06 — Sécurité données | **Must** | Chiffrement TLS + RBAC | HTTPS + JWT + PostgreSQL roles |
-| CO-06 — Conduite du changement | **Must** | Plan de conduite du changement (4 axes) | Cf. `change_management.md` |
+| BF-01 — Surveillance temps réel | **Must** | Dashboard avec vue machine temps réel | Grafana (3 dashboards) + PostgreSQL |
+| BF-02 — Prédiction pannes | **Must** | Modèles Random Forest (`F1=80,4%`) & XGBoost (`F1=81,1%`) | scikit-learn / XGBoost + FastAPI |
+| BF-03 — Estimation RUL | **Must** | Modèle `RandomForestRegressor` (RUL en minutes, `MAE=26,9 min`) | scikit-learn + FastAPI (`/predict/rul`) |
+| BF-04 — Alertes automatiques | **Must** | Centre d'alertes multi-critères et seuils configurables | FastAPI (`/alerts/config`) + Streamlit |
+| BF-05 — Dashboard simple par site | **Must** | Application métier multi-vues (Groupe, Site, Machine) | Streamlit + API REST |
+| BF-06 — Aide à la planification | **Should** | Priorisation par urgence RUL (`< 50 / 150 / 300 min`) | Streamlit (vues *Machine* & *Site*) |
+| BF-07 — Reporting direction | **Should** | Vue consolidée Groupe + Dashboard Grafana Direction Générale | Streamlit + Grafana |
+| BF-08 — Historisation | **Must** | Base relationnelle indexée (`mecha_data`, `mecha_predictions`, `mecha_alerts`) | PostgreSQL 15 |
+| BF-09 — Qualification & suivi alertes | **Must** | Module *Qualification Terrain Human-in-the-Loop* | Streamlit (vue *Accompagnement*) |
+| BF-10 — Déploiement FR/ES | **Should** | Support multi-sites France (3) & Espagne (2) | Architecture Edge/Central + supports FR/ES |
+| BNF-01 — Disponibilité 99.5% | **Must** | Architecture conteneurisée avec `healthcheck` et mode dégradé | Docker Compose + monitoring |
+| BNF-03 — Hébergement Europe | **Must** | Serveurs en Union Européenne (France / Espagne) | Infrastructure souveraine UE |
+| BNF-04 — Traçabilité | **Must** | Journalisation structurée des prédictions et qualifications terrain | `structlog` FastAPI + journal C8 |
+| BNF-06 — Sécurité données | **Must** | Cloisonnement réseau OT/IT (IEC 62443), variables `.env`, non-root | Docker + HTTPS/TLS cible |
+| CO-06 — Conduite du changement | **Must** | Plan de conduite du changement (4 axes, Bridges, FutureWheel) + outil intégré | `change_management.md` + Streamlit |
 
 ---
 
-## 7. Prochaines étapes et actions
+## 7. Suivi d'exécution des actions issues de l'entretien
 
 | N° | Action | Responsable | Échéance | Statut |
 |----|--------|-------------|----------|:------:|
-| 1 | Valider le compte-rendu avec le client | Malek El Fayedh | J+3 | 📋 À faire |
-| 2 | Rédiger le cahier des charges fonctionnel | Équipe projet | J+10 | 📋 À faire |
-| 3 | Concevoir l'architecture technique | Vincent Gonçalves | J+10 | 📋 À faire |
-| 4 | Auditer l'infrastructure réseau de Lyon | Thibaut Doreau | J+7 | 📋 À faire |
-| 5 | Inventorier les capteurs existants (Lyon) | Mme Martin (client) | J+14 | 📋 À faire |
-| 6 | Établir le planning de déploiement | Malek El Fayedh | J+14 | 📋 À faire |
-| 7 | Planifier la première session de co-construction | Pierre-Louis Guinel | J+21 | 📋 À faire |
-| 8 | Préparer le plan de conduite du changement | Équipe projet | J+21 | 📋 À faire |
+| 1 | Valider le compte-rendu avec le client | Malek El Fayedh | J+3 | ✅ Réalisé |
+| 2 | Formaliser la matrice d'exigences MoSCoW | Équipe projet | J+10 | ✅ Réalisé |
+| 3 | Concevoir l'architecture technique IoT / SCADA / MES / IA | Vincent Gonçalves | J+10 | ✅ Réalisé |
+| 4 | Construire et qualifier le pipeline de données hybride (110k lignes) | Thibaut Doreau | J+14 | ✅ Réalisé |
+| 5 | Entraîner et évaluer les 5 modèles ML sans fuite de données | Pierre-Louis Guinel | J+18 | ✅ Réalisé |
+| 6 | Établir le plan de déploiement industriel multi-sites (FR/ES) | Malek El Fayedh | J+20 | ✅ Réalisé |
+| 7 | Intégrer l'interface métier (6 vues Streamlit + 3 dashboards Grafana) | Vincent Gonçalves | J+22 | ✅ Réalisé |
+| 8 | Outiller le plan de conduite du changement (module C8 intégré) | Équipe projet | J+25 | ✅ Réalisé |
 
 ---
 

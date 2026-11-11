@@ -40,10 +40,10 @@ Predire si une machine necessite une intervention de maintenance (`maintenance_r
 ## Donnees d'Entrainement
 
 ### Source
-- **Dataset** : `mecha_dataset_processed.csv`
-- **Volume** : ~100,000 lignes de mesures capteurs IoT
-- **Periode** : Donnees temporelles (2025)
-- **Usines** : 5 sites de production (France, Allemagne, etc.)
+- **Dataset** : `mecha_dataset_processed.csv` (100 000 mesures simulées MECHA + 10 000 mesures du jeu public communautaire UCI AI4I 2020)
+- **Volume** : 110 000 lignes de mesures capteurs IoT (88 000 train / 22 000 test)
+- **Periode** : Donnees temporelles (Janvier - Mars 2025)
+- **Usines** : 5 sites de production MECHA (3 en France : Lyon, Toulouse, Nantes ; 2 en Espagne : Barcelone, Madrid)
 
 ### Split des donnees
 - **Methode** : Split temporel 80/20 (PAS aleatoire)
@@ -102,13 +102,13 @@ Predire si une machine necessite une intervention de maintenance (`maintenance_r
 > Les metriques exactes sont generees automatiquement lors de l'entrainement
 > et sauvegardees dans `models/evaluation/results/random_forest_metrics.json`.
 
-| Metrique | Description |
-|----------|-------------|
-| **Accuracy** | Taux de predictions correctes |
-| **Precision** | Parmi les alertes declenchees, combien sont justifiees |
-| **Recall** | Parmi les maintenances reelles, combien sont detectees |
-| **F1-Score** | Moyenne harmonique precision/recall (metrique principale) |
-| **AUC-ROC** | Capacite de discrimination du modele |
+| Metrique | Valeur sur jeu de test (n = 22 000) | Description |
+|----------|:-----------------------------------:|-------------|
+| **Accuracy** | **97.93 %** | Taux global de predictions correctes |
+| **Precision** | **72.71 %** | Proportion d'alertes declenchees reellement justifiees |
+| **Recall** | **89.99 %** | Proportion de maintenances reelles detectees (93.3 % sur MECHA simule) |
+| **F1-Score** | **80.43 %** | Moyenne harmonique precision/recall (82.2 % sur MECHA simule ; 7.3 % sur AI4I public hors couple/usure) |
+| **AUC-ROC** | **98.80 %** | Capacite globale de discrimination du modele |
 
 ### Metrique principale : F1-Score
 

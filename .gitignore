@@ -35,6 +35,7 @@ models/saved_models/*.h5
 # Data (generated - too large for git)
 data/raw/*.csv
 data/processed/*.csv
+data/processed/feedback_terrain.json
 data/external/*.zip
 !data/raw/.gitkeep
 !data/processed/.gitkeep

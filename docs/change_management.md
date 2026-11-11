@@ -453,5 +453,21 @@ graph TD
 
 ---
 
+## 12. Mise en application concrète du plan via un outil intégré (Critère C8)
+
+Afin de ne pas limiter la conduite du changement à un document théorique, le plan est **directement mis en application au sein de l'application métier Streamlit** via la vue dédiée **`Accompagnement`** (`app/src/dashboard.py` — fonction `page_accompagnement`) :
+
+1. **Outil de participation terrain (*Axe 4 — Faire participer* & *Human-in-the-Loop*)** :
+   - Formulaire opérationnel permettant aux techniciens et opérateurs de qualifier chaque recommandation IA après inspection physique (*Intervention planifiée — Vrai positif*, *Surveillance renforcée*, *Fausse alerte — Faux positif*) sans aucune saisie nominative (respect strict du RGPD).
+   - Persistance dans `data/processed/feedback_terrain.json` et calcul automatique des KPIs d'adoption terrain (nombre de retours saisis, taux d'alertes confirmées, sites pilotes engagés).
+2. **Outil d'accompagnement et de formation intégrée (*Axes 1 & 3 — Informer & Former*)** :
+   - **Fiches réflexes interactives par rôle** (*Opérateur de ligne*, *Technicien de maintenance*, *Responsable site / production*) accessibles en un clic au poste de travail pour guider l'interprétation des seuils (`RUL < 50 / 150 / 300 min`, température `> 100 °C`, probabilité `>= 50 %`).
+3. **Tableau de pilotage opérationnel des transitions (*Modèle de William Bridges*)** :
+   - Suivi en temps réel de l'avancement des 4 phases de déploiement (*Lyon pilote M1–M3 → Toulouse/Nantes M4–M6 → Barcelone/Madrid M7–M9 → Groupe complet M10–M12*) associé aux étapes psychologiques de Bridges (*Fin des habitudes → Zone neutre → Nouveau départ*).
+
+![Mise en application outillée du plan de conduite du changement dans Streamlit](images/streamlit_accompagnement.png)
+
+---
+
 > **Document validé par** : Équipe projet MECHA  
 > **Prochaine révision** : Après le REX de la Phase 1 (pilote Lyon)

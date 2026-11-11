@@ -764,12 +764,12 @@ def save_model(model, model_name, directory, scaler=None):
     """
     directory.mkdir(parents=True, exist_ok=True)
     filepath = directory / f"{model_name}.joblib"
-    joblib.dump(model, filepath)
+    joblib.dump(model, filepath, compress=3)
     print(f"  [OK] Modele sauvegarde : {filepath.name}")
 
     if scaler is not None:
         scaler_path = directory / f"{model_name}_scaler.joblib"
-        joblib.dump(scaler, scaler_path)
+        joblib.dump(scaler, scaler_path, compress=3)
         print(f"  [OK] Scaler sauvegarde : {scaler_path.name}")
 
 

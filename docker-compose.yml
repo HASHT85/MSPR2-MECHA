@@ -8,6 +8,40 @@
 
 services:
   # --------------------------------------------------------------------------
+  # Init Pipeline — Generation auto des donnees & modeles si absents au 1er run
+  # --------------------------------------------------------------------------
+  init-pipeline:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: mecha-init
+    user: "0:0"
+    restart: "no"
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+    command:
+      - bash
+      - -c
+      - |
+        set -e
+        if [ ! -f /app/data/processed/mecha_dataset_processed.csv ]; then
+          echo "[MECHA-INIT] Generation du dataset hybride (110 000 lignes)..."
+          python /app/data/scripts/generate_data.py
+          python /app/data/scripts/merge_datasets.py
+        else
+          echo "[MECHA-INIT] Dataset deja present."
+        fi
+        if [ ! -f /app/models/saved_models/random_forest_classifier.joblib ]; then
+          echo "[MECHA-INIT] Entrainement des 5 modeles ML..."
+          python /app/models/training/train_models.py
+        else
+          echo "[MECHA-INIT] Modeles ML deja presents."
+        fi
+    networks:
+      - mecha-network
+
+  # --------------------------------------------------------------------------
   # PostgreSQL — Base de données
   # --------------------------------------------------------------------------
   db:
@@ -23,8 +57,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-      - ./data/processed/mecha_dataset_processed.csv:/docker-entrypoint-initdb.d/mecha_dataset_processed.csv:ro
+      - ./data/processed:/data/processed:ro
       - ./db/load_data.sh:/docker-entrypoint-initdb.d/99-load-data.sh:ro
+    depends_on:
+      init-pipeline:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mecha_user} -d ${POSTGRES_DB:-mecha_db}"]
       interval: 10s
@@ -67,6 +104,8 @@ services:
       - ./models:/app/models:ro
       - ./data:/app/data:ro
     depends_on:
+      init-pipeline:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
     healthcheck:
@@ -99,7 +138,7 @@ services:
       api:
         condition: service_healthy
     volumes:
-      - ./data:/app/data:ro
+      - ./data:/app/data
       - ./models:/app/models:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]

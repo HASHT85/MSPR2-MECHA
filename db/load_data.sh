@@ -24,7 +24,10 @@ if [ "$ROW_COUNT" -gt 0 ]; then
   exit 0
 fi
 
-CSV_FILE="/docker-entrypoint-initdb.d/mecha_dataset_processed.csv"
+CSV_FILE="/data/processed/mecha_dataset_processed.csv"
+if [ ! -f "$CSV_FILE" ]; then
+  CSV_FILE="/docker-entrypoint-initdb.d/mecha_dataset_processed.csv"
+fi
 
 if [ ! -f "$CSV_FILE" ]; then
   echo "WARNING: CSV file not found at $CSV_FILE. Skipping import."

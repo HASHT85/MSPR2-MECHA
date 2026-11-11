@@ -1,7 +1,7 @@
 <p align="center">
-  <h1 align="center">🏭 MECHA — Maintenance Predictive Industrielle</h1>
+  <h1 align="center">MECHA Predict — Maintenance Prédictive Industrielle par IA</h1>
   <p align="center">
-    <strong>Plateforme IA de maintenance prédictive pour un groupe industriel international</strong>
+    <strong>Plateforme intégrée d'analyse prédictive, d'estimation RUL et de supervision multi-sites</strong>
   </p>
   <p align="center">
     <a href="https://github.com/HASHT85/MSPR2-MECHA/actions/workflows/ci.yml">
@@ -13,61 +13,68 @@
     <img src="https://img.shields.io/badge/PostgreSQL-15-336791?logo=postgresql&logoColor=white" alt="PostgreSQL">
     <img src="https://img.shields.io/badge/Grafana-11.6-F46800?logo=grafana&logoColor=white" alt="Grafana">
     <img src="https://img.shields.io/badge/Streamlit-1.40-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit">
-    <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
+    <img src="https://img.shields.io/badge/tests-104%20passed-brightgreen" alt="Tests">
   </p>
 </p>
 
 ---
 
-## 📋 Contexte
+## Contexte et Cadre Académique
 
-**MECHA** est un groupe industriel opérant **5 usines** en France et en Espagne, avec **100 machines industrielles** à superviser. Ce projet implémente une solution complète de **maintenance prédictive** basée sur l'Intelligence Artificielle, permettant d'anticiper les pannes, optimiser la planification de maintenance et réduire les arrêts non planifiés.
+**MECHA** est un groupe industriel européen fictif spécialisé dans l'usinage de haute précision (aéronautique 60 %, automobile 40 %), opérant **5 usines** en France (*Lyon, Toulouse, Nantes*) et en Espagne (*Barcelone, Madrid*). Ce projet industrialise le Proof of Concept initié lors de la **MSPR TPRE831** en livrant une plateforme complète de **maintenance prédictive par Intelligence Artificielle** permettant d'anticiper les défaillances, d'estimer la durée de vie résiduelle (*RUL*), d'unifier les alertes multi-sites et d'accompagner les équipes terrain (*Human-in-the-Loop*).
 
-> **MSPR 2 — Bloc 4 RNCP35584** | EPSI — Expert en Ingénierie Informatique
-
----
-
-## 🏗️ Architecture
-
-| Service | Technologie | Port | Description |
-|---------|------------|------|-------------|
-| **API** | FastAPI | `8000` | API REST de prédiction ML (9 endpoints) |
-| **Dashboard** | Streamlit | `8501` | Dashboard métier multi-niveaux (5 vues), consomme l'API pour toutes les prédictions IA |
-| **Monitoring** | Grafana | `3000` | Supervision temps réel (3 dashboards par rôle) |
-| **Base de données** | PostgreSQL 15 | `5432` | Stockage des données capteurs (110k mesures) |
+> **Certification** : RNCP35584 (Niveau 7) — *Expert en Informatique et Système d'Information* (EPSI)  
+> **Épreuve** : MSPR **TPRE841** — Bloc 4 : *Concevoir et développer des solutions applicatives métier et spécifiques* (`C1` à `C8`)  
+> **Équipe projet** : Malek El Fayedh, Thibaut Doreau, Vincent Gonçalves, Pierre-Louis Guinel
 
 ---
 
-## 🖥️ Screenshots
+## Architecture Applicative
 
-### 📊 Dashboard Streamlit (Ajout MSPR 2 — Analyse IA)
+<p align="center">
+  <img src="docs/images/diag_architecture.png" alt="Architecture MECHA Predict en 7 couches" width="820">
+</p>
+
+| Service | Technologie | Port | Rôle dans l'architecture |
+|---------|------------|:----:|--------------------------|
+| **init-pipeline** | Python 3.11 (one-shot) | — | Génère automatiquement le dataset hybride (110k lignes) et entraîne les 5 modèles `.joblib` au premier lancement si absents |
+| **db** | PostgreSQL 15 Alpine | `5432` | Stockage relationnel (`mecha_data`, `mecha_usines`, `mecha_predictions`, `mecha_alerts`), vue temps réel `v_machine_status`, 11 index |
+| **api** | FastAPI + Pydantic | `8000` | API REST d'inférence ML et de règles métiers (**9 endpoints**, chaîne de fallback, clé API optionnelle) |
+| **dashboard** | Streamlit + Plotly | `8501` | Application métier multi-profils (**6 vues** dont l'outil d'accompagnement terrain `C8` et le paramétrage dynamique `C4`) |
+| **grafana** | Grafana OSS | `3000` | Supervision industrielle temps réel (**3 dashboards** provisionnés automatiquement par rôle) |
+
+---
+
+## Aperçu Visuel des Interfaces
+
+### Dashboard Métier Streamlit (6 vues — Analyse IA & Accompagnement)
 
 #### Vue Site — Directeur d'Usine
 <p align="center">
   <img src="docs/images/streamlit_site.png" alt="Streamlit Vue Site" width="800">
 </p>
 
-#### Vue Machine — Diagnostic Individuel
+#### Vue Machine — Diagnostic Individuel & RUL
 <p align="center">
   <img src="docs/images/streamlit_machine.png" alt="Streamlit Vue Machine" width="800">
 </p>
 
-#### Centre d'Alertes
+#### Centre d'Alertes Unifié
 <p align="center">
   <img src="docs/images/streamlit_alertes.png" alt="Streamlit Alertes" width="800">
 </p>
 
-#### Performance du Modèle IA
+#### Performance et Explicabilité du Modèle IA (sans fuite de données)
 <p align="center">
   <img src="docs/images/streamlit_modele_ia.png" alt="Streamlit Modèle IA" width="800">
 </p>
 
-#### Tendance Température par Machine
+#### Accompagnement Utilisateurs & Paramétrage Métier (C8 & C4)
 <p align="center">
-  <img src="docs/images/streamlit_temperature.png" alt="Streamlit Température" width="800">
+  <img src="docs/images/streamlit_accompagnement.png" alt="Streamlit Accompagnement C8 et Paramétrage C4" width="800">
 </p>
 
-### 📈 Grafana (Retenu MSPR 1 — Monitoring Temps Réel)
+### Supervision Temps Réel Grafana (3 dashboards par rôle)
 
 #### Direction Générale (DG Groupe)
 <p align="center">
@@ -86,212 +93,141 @@
 
 ---
 
-## 🤖 Modèles ML
+## Modèles de Machine Learning & Données
 
-| Modèle | Type | F1-Score | AUC-ROC | Usage |
-|--------|------|----------|---------|-------|
-| **Random Forest** | Classification | **80.4%** | 98.8% | Prédiction de pannes (modèle principal) |
-| **XGBoost** | Classification | 81.1% | **98.8%** | Prédiction de pannes (alternatif) |
-| **Logistic Regression** | Classification | 23.3% | 89.5% | Baseline de comparaison |
-| **Isolation Forest** | Anomalie | — | 83.9% | Détection d'anomalies non-supervisée |
-| **RF Regressor** | Régression | MAE=27 min | R²=0.72 | Estimation RUL (durée de vie restante, en minutes) |
+### Conformité des données (Sujet TPRE841 p.4)
+Le jeu de données final (`110 000 lignes × 30 colonnes`) combine :
+1. **100 000 mesures simulées MECHA** (`50 machines`, `5 usines`, cycles jour/nuit, dégradation physique progressive, 4 profils machines) ;
+2. **10 000 mesures publiques communautaires de référence** issues du benchmark académique ouvert **UCI AI4I 2020 Predictive Maintenance Dataset** (*CC BY 4.0*, aucune donnée industrielle confidentielle réelle d'entreprise).
 
-> Métriques mesurées sur le jeu de test (22 000 lignes), lues par l'API sur `GET /metrics`.
-> Sur la partie **réelle** (AI4I 2020) du jeu de test, le F1 tombe à ~7 % : les capteurs AI4I
-> (couple, usure d'outil) ne sont pas dans les 10 features capteurs communes. Limite documentée et assumée.
+### Résultats évalués sur jeu de test temporel (22 000 lignes)
 
-### Bonnes pratiques ML
-- ✅ **10 features capteurs uniquement** — `predicted_remaining_life` et `downtime_risk` sont **exclus** des entrées (ils contiennent la réponse : fuite de données corrigée), tout comme `machine_status`
-- ✅ **Split temporel 80/20 par source de données** — on entraîne sur le passé, on teste sur le futur, et les données réelles AI4I sont présentes dans le train comme dans le test
-- ✅ **Métriques ventilées par source** (simulé vs réel) pour ne pas masquer un modèle nul sur le réel
-- ✅ **Gestion du déséquilibre** — `class_weight='balanced'` / `scale_pos_weight`
-- ✅ **5 Model Cards** conformes EU AI Act
+| Modèle | Type | F1-Score | Rappel | AUC-ROC / R² | Rôle opérationnel |
+|--------|------|:--------:|:------:|:------------:|-------------------|
+| **Random Forest** | Classification binaire | **80.4 %** | **90.0 %** | AUC = **0.988** | Modèle principal en production (`POST /predict`) |
+| **XGBoost** | Classification binaire | **81.1 %** | 88.6 % | AUC = **0.988** | Modèle challenger / fallback automatique |
+| **Régression Logistique** | Classification linéaire | 23.3 % | 92.0 % | AUC = 0.895 | Baseline linéaire de comparaison |
+| **Isolation Forest** | Détection d'anomalies | 31.8 % | 34.7 % | AUC = 0.839 | Détection non supervisée (`POST /anomaly`) |
+| **RF Regressor (RUL)** | Régression | MAE = **26.9 min** | RMSE = 46.4 min | **R² = 0.719** | Estimation durée de vie restante (`POST /predict/rul`) |
+
+### Garanties méthodologiques
+- **Zéro fuite de données (*Data Leakage*)** : entraînement strict sur **10 variables capteurs et temporelles** (`machine_status`, `predicted_remaining_life` et `downtime_risk` sont exclus et vérifiés par tests unitaires).
+- **Split temporel 80/20 stratifié par source** : séparation chronologique stricte passé → futur sur chaque source, avec ventilation transparente des métriques (simulé vs benchmark UCI AI4I).
+- **Gestion du déséquilibre de classes (4,7 % de pannes)** : `class_weight='balanced'` et `scale_pos_weight`.
+- **Explicabilité et conformité EU AI Act** : 5 *Model Cards* détaillées dans `models/model_cards/` et validation *Human-in-the-Loop*.
 
 ---
 
-## 🚀 Démarrage rapide
+## Démarrage Rapide
 
-### Prérequis
-- [Docker](https://www.docker.com/) & Docker Compose
-- [Git](https://git-scm.com/)
-
-### Installation
+### Option 1 — Déploiement complet via Docker Compose (recommandé)
 
 ```bash
-# 1. Cloner le repository
+# 1. Cloner le dépôt
 git clone https://github.com/HASHT85/MSPR2-MECHA.git
 cd MSPR2-MECHA
 
-# 2. Configurer l'environnement
+# 2. Configurer les variables d'environnement
 cp .env.example .env
-# Editer .env pour définir POSTGRES_PASSWORD
 
-# 3. Lancer l'application
-docker compose up -d
+# 3. Construire et démarrer toute la plateforme
+# Le conteneur init-pipeline génère automatiquement le dataset 110k et les 5 modèles s'ils sont absents
+docker compose up --build -d
 
-# 4. Vérifier les services
+# 4. Vérifier l'état des services (healthy)
 docker compose ps
 ```
 
-### Régénérer les données et les modèles (reproductibilité)
+| Service | URL locale | Identifiants par défaut |
+|---------|------------|-------------------------|
+| **Dashboard Streamlit (6 vues)** | `http://localhost:8501` | Accès direct |
+| **API FastAPI (Swagger OpenAPI)** | `http://localhost:8000/docs` | Header `X-API-Key` si activé |
+| **Supervision Grafana (3 vues)** | `http://localhost:3000` | `admin` / défini dans `.env` |
 
-Les jeux de données finaux et les modèles `.joblib` ne sont pas versionnés (fichiers lourds).
-Ils se reconstruisent de zéro en trois commandes, exactement comme le fait la CI :
+### Option 2 — Exécution locale Python (pipeline reproductible)
 
 ```bash
-python data/scripts/generate_data.py      # 100 000 lignes simulées -> data/raw + data/processed
-python data/scripts/merge_datasets.py     # fusion avec AI4I 2020 (10 000 lignes réelles) -> 110 000 lignes
-python models/training/train_models.py    # 5 modèles -> models/saved_models + métriques JSON (~10 s)
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt -r api/requirements.txt -r app/requirements.txt
+
+# Régénération complète des données et des 5 modèles (~12 secondes)
+python data/scripts/generate_data.py      # 100 000 lignes simulées MECHA
+python data/scripts/merge_datasets.py     # Fusion 110 000 lignes (typage Int64 compatible PostgreSQL COPY)
+python models/training/train_models.py    # Entraînement des 5 modèles compressés + métriques JSON
 ```
 
-Sans modèles, l'API démarre en **mode fallback** (heuristiques) et le signale sur `GET /health`
-(`models_loaded: false`). Le dashboard affiche alors « MODE MOCK » dans la barre latérale.
-
-### Accès aux services
-
-| Service | URL | Identifiants |
-|---------|-----|-------------|
-| **Dashboard** | [http://localhost:8501](http://localhost:8501) | — |
-| **API Docs** | [http://localhost:8000/docs](http://localhost:8000/docs) | API Key (si configurée) |
-| **Grafana** | [http://localhost:3000](http://localhost:3000) | `admin` / voir `.env` |
-
 ---
 
-## 📊 Dashboards par rôle
-
-| Dashboard | Public cible | Contenu |
-|-----------|-------------|---------|
-| **DG Groupe** | Direction Générale | KPIs consolidés 5 usines, benchmark inter-sites |
-| **Directeur Usine** | Directeur de site | Filtrable par usine, jauges capteurs, détail machines |
-| **Technicien** | Équipe maintenance | Alertes, plan d'action prioritaire avec recommandations |
-
-### Dashboard Streamlit (5 vues)
-- **Groupe** — Vision consolidée du groupe industriel
-- **Site** — Performance détaillée par usine
-- **Machine** — Fiche individuelle avec historique capteurs
-- **Alertes** — Système d'alertes avec niveaux de sévérité
-- **Modèle IA** — Métriques ML et explicabilité
-
----
-
-## 🔌 API Endpoints
+## Endpoints de l'API REST (`api/main.py`)
 
 | Méthode | Route | Description |
-|---------|-------|-------------|
-| `GET` | `/health` | Health check |
-| `POST` | `/predict` | Prédiction maintenance (1 machine) |
-| `POST` | `/predict/batch` | Prédiction batch (jusqu'à 100 machines) |
-| `POST` | `/predict/rul` | Estimation de durée de vie restante (RUL) |
-| `POST` | `/anomaly` | Détection d'anomalies (Isolation Forest) |
-| `GET` | `/metrics` | Métriques d'entraînement des modèles + statistiques API |
-| `GET` | `/model-info` | Model cards résumées des modèles chargés |
-| `GET` | `/alerts/config` | Configuration des seuils d'alerte |
-| `PUT` | `/alerts/config` | Mise à jour des seuils d'alerte |
-
-### Exemple de requête
-
-```bash
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{
-    "temperature": 85.5,
-    "vibration": 45.2,
-    "humidity": 60.0,
-    "pressure": 2.5,
-    "energy_consumption": 3.8,
-    "machine_id": "12"
-  }'
-```
+|:-------:|-------|-------------|
+| `GET` | `/health` | État de santé de l'API, disponibilité des modèles ML et uptime |
+| `POST` | `/predict` | Prédiction unitaire de panne + niveau de risque + alertes de seuils |
+| `POST` | `/predict/batch` | Prédiction par lot (jusqu'à 100 machines simultanées) |
+| `POST` | `/predict/rul` | Estimation de la durée de vie résiduelle (*RUL* en minutes + catégorie d'urgence) |
+| `POST` | `/anomaly` | Détection d'anomalie comportementale (*Isolation Forest* + facteurs contributifs) |
+| `GET` | `/metrics` | Métriques d'évaluation des 5 modèles (ventilées par source) + télémétrie API |
+| `GET` | `/model-info` | Fiches synthétiques des modèles chargés et statut de conformité EU AI Act |
+| `GET` | `/alerts/config` | Consultation des seuils d'alerte métiers actifs |
+| `PUT` | `/alerts/config` | Mise à jour dynamique à chaud des seuils d'alerte métiers |
 
 ---
 
-## 🧪 Tests
+## Qualité du Code, Tests & CI/CD
 
 ```bash
-# Lancer tous les tests
-pytest -v
+# Vérification du style et formatage (Ruff)
+ruff check . && ruff format --check .
 
-# Avec couverture
-pytest --cov=api --cov=models --cov-report=term-missing -v
+# Exécution des 104 tests automatisés avec couverture
+MODEL_PATH=models/saved_models pytest --cov=api --cov=models --cov-report=term-missing -v
 ```
 
-**102 tests** couvrant :
-- 🔬 Qualité des données (19 tests)
-- 🔌 Intégration API (6 tests)
-- 🤖 Modèles ML (16 tests, dont la cohérence entraînement ↔ API et le chargement réel des modèles par l'API)
-- 📡 Endpoints API (61 tests)
-
-En CI, les données et les modèles sont régénérés avant les tests : aucun test n'est sauté.
+**104 tests automatisés (`100 % PASS`, `0 skipped`)** :
+- `tests/test_data_quality.py` (**21 tests**) : structure 110k lignes, intégrité, absence de fuite de données, compatibilité stricte `\COPY` PostgreSQL sur les colonnes entières.
+- `tests/test_model.py` (**16 tests**) : chargement des 5 modèles `.joblib`, cohérence des 10 features entraînement ↔ API, inférence réelle hors mode mock.
+- `api/tests/test_api.py` (**61 tests**) : validation Pydantic des 9 routes REST, authentification `X-API-Key`, cas limites, modification dynamique des seuils (`87 %` de couverture sur `api/main.py`).
+- `tests/test_integration.py` (**6 tests**) : scénarios métiers bout-en-bout (machine nominale vs critique, cohérence unitaire/batch, chaîne complète).
 
 ---
 
-## 📁 Structure du projet
+## Livrables Documentaires et Exports PDF Prêts à Déposer
 
-```
+Tous les livrables exigés par le sujet **MSPR TPRE841** sont disponibles en version source Markdown et exportés en **PDF paginés prêts à envoyer** :
+
+| Livrable | Source Markdown | Export PDF prêt à déposer | Compétences |
+|----------|-----------------|---------------------------|:-----------:|
+| **Dossier Global Consolidé** | [`docs/compte_rendu_soutenance.md`](docs/compte_rendu_soutenance.md) | [`docs/compte_rendu_soutenance.pdf`](docs/compte_rendu_soutenance.pdf) | **C1 à C8** |
+| **Support de Soutenance (20 min)** | [`docs/soutenance.md`](docs/soutenance.md) | [`docs/soutenance_mecha_mspr2.pdf`](docs/soutenance_mecha_mspr2.pdf) & [`.pptx`](docs/soutenance_mecha_mspr2.pptx) | **Soutenance** |
+| **01. Entretien Client & Besoins** | [`docs/client_interview.md`](docs/client_interview.md) | [`docs/livrables_pdf/01_Entretien_Client_Besoins_C1.pdf`](docs/livrables_pdf/01_Entretien_Client_Besoins_C1.pdf) | **C1** |
+| **02. Architecture Applicative** | [`docs/architecture.md`](docs/architecture.md) | [`docs/livrables_pdf/02_Architecture_Applicative_C2.pdf`](docs/livrables_pdf/02_Architecture_Applicative_C2.pdf) | **C2, C4** |
+| **03. Choix Techniques & Git** | [`docs/technical_choices.md`](docs/technical_choices.md) | [`docs/livrables_pdf/03_Choix_Techniques_et_Modeles_C2_C3.pdf`](docs/livrables_pdf/03_Choix_Techniques_et_Modeles_C2_C3.pdf) | **C2, C3** |
+| **04. Dictionnaire de Données** | [`data/data_dictionary.md`](data/data_dictionary.md) | [`docs/livrables_pdf/04_Dictionnaire_Donnees_MECHA.pdf`](docs/livrables_pdf/04_Dictionnaire_Donnees_MECHA.pdf) | **C3, C4** |
+| **05. Fiches Modèles (Model Cards)** | [`models/model_cards/`](models/model_cards/) | [`docs/livrables_pdf/05_Fiches_Modeles_ML_Model_Cards_C3.pdf`](docs/livrables_pdf/05_Fiches_Modeles_ML_Model_Cards_C3.pdf) | **C3, C7** |
+| **06. Plan de Tests & Conformité** | [`docs/validation_plan.md`](docs/validation_plan.md) | [`docs/livrables_pdf/06_Plan_Tests_Validation_et_Conformite_C5_C7.pdf`](docs/livrables_pdf/06_Plan_Tests_Validation_et_Conformite_C5_C7.pdf) | **C5, C6, C7** |
+| **07. Guide Utilisateur Métier (2 p.)** | [`docs/user_guide.md`](docs/user_guide.md) | [`docs/livrables_pdf/07_Guide_Utilisateur_Metier_2pages_C7.pdf`](docs/livrables_pdf/07_Guide_Utilisateur_Metier_2pages_C7.pdf) | **C7** |
+| **08. Conduite du Changement** | [`docs/change_management.md`](docs/change_management.md) | [`docs/livrables_pdf/08_Conduite_du_Changement_C8.pdf`](docs/livrables_pdf/08_Conduite_du_Changement_C8.pdf) | **C8** |
+| **09. Analyse RGPD & EU AI Act** | [`docs/rgpd_analysis.md`](docs/rgpd_analysis.md) | [`docs/livrables_pdf/09_Analyse_RGPD_et_EU_AI_Act.pdf`](docs/livrables_pdf/09_Analyse_RGPD_et_EU_AI_Act.pdf) | **C2, C7** |
+| **10. Plan de Déploiement Multi-Sites** | [`docs/deployment_plan.md`](docs/deployment_plan.md) | [`docs/livrables_pdf/10_Plan_Deploiement_Multi_Sites.pdf`](docs/livrables_pdf/10_Plan_Deploiement_Multi_Sites.pdf) | **C4, C8** |
+
+---
+
+## Structure du Dépôt
+
+```text
 MSPR2-MECHA/
-├── 📂 api/                    # API FastAPI
-│   ├── main.py                # 9 endpoints REST
-│   └── Dockerfile             # Image Docker multi-stage
-├── 📂 app/src/                # Dashboard Streamlit
-│   └── dashboard.py           # 5 vues métier (prédictions via l'API)
-├── 📂 data/                   # Pipeline de données
-│   ├── scripts/               # Génération + fusion datasets
-│   ├── processed/             # Dataset final (110k lignes)
-│   └── data_dictionary.md     # Dictionnaire de données
-├── 📂 db/                     # Base de données
-│   ├── init.sql               # Schéma PostgreSQL (4 tables, 9 index)
-│   └── load_data.sh           # Ingestion automatique des données
-├── 📂 docs/                   # Documentation (9 documents, 180+ KB)
-├── 📂 grafana/                # Monitoring
-│   ├── dashboards/            # 3 dashboards JSON par rôle
-│   └── provisioning/          # Datasource + dashboard auto
-├── 📂 models/                 # Machine Learning
-│   ├── saved_models/          # 5 modèles entraînés (.joblib)
-│   ├── model_cards/           # 5 fiches modèles (EU AI Act)
-│   ├── evaluation/            # Métriques JSON
-│   └── training/              # Script d'entraînement
-├── 📂 tests/                  # Tests (102 tests)
-├── 🐳 docker-compose.yml      # Orchestration 4 services
-├── ⚙️ .env.example             # Configuration template
-├── 🧹 ruff.toml                # Règles de lint/format (CI)
-└── 📄 README.md               # Ce fichier
+├── api/                        # API REST FastAPI (main.py : 9 routes, Dockerfile non-root, 61 tests)
+├── app/                        # Dashboard métier Streamlit (dashboard.py : 6 vues, Dockerfile)
+├── data/                       # Pipeline de données (generate_data.py, merge_datasets.py, data_dictionary.md)
+├── db/                         # Base PostgreSQL 15 (init.sql : 4 tables + vue + 11 index, load_data.sh)
+├── docs/                       # Documentation complète, schémas PNG, livrables PDF et support PPTX/PDF
+│   ├── images/                 # Diagrammes d'architecture et captures d'écran réelles (Streamlit & Grafana)
+│   └── livrables_pdf/          # 10 livrables individuels exportés en PDF A4 prêts à transmettre
+├── grafana/                    # Provisioning YAML automatique + 3 dashboards JSON par rôle métier
+├── models/                     # Entraînement ML (train_models.py), 5 Model Cards, métriques JSON
+├── tests/                      # Suites de tests transverses (qualité données, modèles ML, intégration)
+├── .github/workflows/ci.yml    # Pipeline CI/CD GitHub Actions (Lint Ruff -> Data/ML/104 Tests -> Build Docker)
+├── docker-compose.yml          # Orchestration reproductible (init-pipeline + db + api + dashboard + grafana)
+└── ruff.toml                   # Configuration standardisée du linter et formateur Python
 ```
-
----
-
-## 📚 Documentation
-
-| Document | Description |
-|----------|-------------|
-| [Architecture](docs/architecture.md) | Architecture technique détaillée |
-| [Choix techniques](docs/technical_choices.md) | Justification des technologies |
-| [Plan de validation](docs/validation_plan.md) | Stratégie de test et recette |
-| [Plan de déploiement](docs/deployment_plan.md) | Procédure de mise en production |
-| [Conduite du changement](docs/change_management.md) | Accompagnement des utilisateurs |
-| [Analyse RGPD](docs/rgpd_analysis.md) | Conformité RGPD et EU AI Act |
-| [Interview client](docs/client_interview.md) | Entretien avec le client fictif |
-| [Guide utilisateur](docs/user_guide.md) | Manuel d'utilisation |
-| [Soutenance](docs/soutenance.md) | Support de présentation orale |
-
----
-
-## 🔒 Sécurité
-
-- Variables sensibles dans `.env` (jamais commitées)
-- API Key optionnelle via header `X-API-Key`
-- Volumes Docker en lecture seule (`:ro`) pour données et modèles
-- Health checks sur tous les services
-- Utilisateur non-root dans le container API
-- Analyse RGPD et EU AI Act documentée
-
----
-
-## 👥 Équipe
-
-Projet réalisé dans le cadre de la **MSPR 2 — Bloc 4** (EPSI RNCP35584)
-
----
-
-<p align="center">
-  <sub>Built with ❤️ using Python, FastAPI, Streamlit, Grafana & Docker</sub>
-</p>

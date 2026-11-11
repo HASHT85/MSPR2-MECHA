@@ -1,234 +1,69 @@
-# 📖 Guide Utilisateur — MECHA Predict
+# Guide Utilisateur Métier — MECHA Predict (C7)
 
-> **Destinataires** : Responsables maintenance, Responsables production, Chefs d'équipe  
-> **Version** : 1.0  
-> **Date** : 30/05/2026  
-> **Classification** : Usage interne  
-> **Compétence couverte** : **C7 — Documentation utilisateur**
+> **Public cible** : Responsables de maintenance, responsables de production, techniciens d'atelier et chefs d'équipe des 5 usines MECHA (Lyon, Toulouse, Nantes, Barcelone, Madrid)  
+> **Référence** : MSPR 2 — Bloc 4 RNCP35584 (`TPRE841`) | **Format** : Référentiel opérationnel métier (2 pages)
 
 ---
 
-## 🎯 À quoi sert MECHA Predict ?
+## 1. À quoi sert MECHA Predict ?
 
-MECHA Predict est **votre assistant de maintenance intelligent**. Il surveille en permanence l'état de vos machines et vous prévient **avant** qu'une panne ne se produise.
+**MECHA Predict** est un outil d'aide à la décision qui anticipe les pannes sur vos **50 machines d'usinage et de découpe** à partir des capteurs IoT d'atelier (température, vibration, pression, humidité, énergie). Il poursuit trois objectifs concrets :
+1. **Éviter les arrêts non planifiés** en détectant les dérives mécaniques ou thermiques avant la casse.
+2. **Planifier les interventions au bon moment** grâce à l'estimation du temps restant avant défaillance (**RUL**, exprimé en **minutes**).
+3. **Protéger la qualité client** (aéronautique & automobile) en repérant immédiatement les régimes anormaux susceptibles de générer des rebuts.
 
-> 💡 **En résumé** : Au lieu d'attendre qu'une machine tombe en panne (maintenance curative), MECHA Predict anticipe les problèmes et vous recommande d'intervenir au bon moment (maintenance prédictive).
-
-### Ce que fait la solution
-
-| Fonction | Description |
-|----------|-------------|
-| 🔍 **Surveillance continue** | Les capteurs de vos machines (température, vibration, pression…) sont analysés en permanence |
-| 🧠 **Prédiction de pannes** | L'intelligence artificielle détecte les signes avant-coureurs d'une défaillance |
-| ⏱️ **Estimation de durée de vie** | La solution estime combien de temps une machine peut encore fonctionner normalement |
-| 🚨 **Alertes automatiques** | Vous êtes prévenu dès qu'une intervention est recommandée |
-| 📊 **Tableaux de bord** | Vous visualisez l'état de votre parc machines en un coup d'œil |
-
-### Ce que la solution **ne fait pas**
-
-- ❌ Elle ne remplace **pas** votre expertise de terrain
-- ❌ Elle ne décide **pas** des interventions à votre place
-- ❌ Elle ne contrôle **pas** les machines directement
+> **Règle d'or — Mode *Human-in-the-Loop* (Conformité EU AI Act)** : MECHA Predict émet uniquement des **recommandations**. Aucune machine n'est arrêtée automatiquement et aucun ordre de travail n'est imposé sans validation par un technicien ou responsable qualifié.
 
 ---
 
-## 🔐 Accéder à la solution
+## 2. Prise en main des deux interfaces complémentaires
 
-### Connexion
+| Outil | Accès standard (Docker) | Public principal | Usage quotidien |
+|-------|-------------------------|------------------|-----------------|
+| **Application Métier Streamlit** | `http://localhost:8501` | Responsables site, techniciens maintenance, référents terrain | Diagnostic IA machine par machine, centre d'alertes filtrable, qualification terrain et réglage des seuils (**6 vues**) |
+| **Supervision Temps Réel Grafana** | `http://localhost:3000` | Direction Générale, directeurs d'usine, pupitreurs atelier | Écrans muraux temps réel connectés à PostgreSQL (**3 tableaux de bord pré-configurés**) |
 
-| Information | Détail |
-|-------------|--------|
-| **Adresse** | `https://mecha-predict.votre-entreprise.fr` |
-| **Identifiant** | Votre identifiant habituel (même que le réseau d'entreprise) |
-| **Mot de passe** | Votre mot de passe réseau |
-| **Navigateurs compatibles** | Chrome (recommandé), Firefox, Edge |
+### 2.1 Les 6 vues de l'Application Métier Streamlit
+Utilisez le menu latéral gauche **Navigation** pour basculer entre les vues :
+1. **Groupe** : Vision consolidée des 5 usines FR/ES (parc total, machines actives/en panne, alertes IA détectées, comparatif inter-sites).
+2. **Site** : Pilotage d'une usine choisie (état des 10 machines du site, jauges KPIs, liste priorisée des machines à contrôler).
+3. **Machine** : Diagnostic complet d'un équipement (évolution historique des capteurs, probabilité IA de panne, **RUL en minutes**, score d'anomalie).
+4. **Alertes** : Centre d'alertes multi-critères filtrable par **usine**, **type d'alerte** (*Température critique*, *RUL critique*, *Prédiction IA*, *Panne*) et **profil machine**.
+5. **Modèle IA** : Transparence sur l'état des modèles chargés par l'API et leurs performances vérifiées (`F1 = 80,4 %` Random Forest, `81,1 %` XGBoost).
+6. **Accompagnement** : Fiches réflexes par métier, **formulaire de qualification terrain** (*Vrai positif / Surveillance / Fausse alerte*) et **réglage à chaud des seuils d'alerte**.
 
-> ⚠️ **Premier accès** : Contactez votre administrateur local pour activer votre compte. Un tutoriel de prise en main de 15 minutes est disponible directement sur la plateforme.
+![Vue Site et Vue Accompagnement Métier Streamlit](images/streamlit_site.png)
 
----
-
-## 📊 Le tableau de bord principal
-
-Lorsque vous vous connectez, vous arrivez sur le **tableau de bord principal** qui vous donne une vue d'ensemble de votre site.
-
-### Les indicateurs clés
-
-| Indicateur | Signification | Objectif |
-|------------|---------------|----------|
-| **Machines actives** | Nombre de machines en fonctionnement | Proche de 100% |
-| **Alertes en cours** | Nombre d'alertes non traitées | Le plus bas possible |
-| **Taux de disponibilité** | % du temps où les machines sont opérationnelles | > 95% |
-| **Prochaine maintenance recommandée** | Machine prioritaire pour la prochaine intervention | Planifier dans les délais |
-
-### Comprendre le code couleur
-
-Le système utilise un code couleur simple pour vous indiquer l'état de chaque machine :
-
-| Couleur | Signification | Action recommandée |
-|---------|---------------|-------------------|
-| 🟢 **Vert** | Machine en bon état, fonctionnement normal | Aucune action nécessaire |
-| 🟡 **Orange** | Machine sous surveillance, signes de dégradation détectés | Planifier une vérification dans les prochains jours |
-| 🔴 **Rouge** | Intervention urgente recommandée, risque de panne élevé | Planifier une intervention dès que possible |
-| ⚪ **Gris** | Machine à l'arrêt ou données indisponibles | Vérifier l'état du capteur |
+### 2.2 Les 3 tableaux de bord Grafana (monitoring continu)
+- **MECHA — Direction Générale** : disponibilité globale, comparaison France / Espagne, tendances macroscopiques.
+- **MECHA — Responsable Usine** : suivi d'atelier par ligne (`LP-A`, `LP-B`, `LP-C`), températures et alertes actives du site.
+- **MECHA — Technicien Maintenance** : courbes fines capteurs (température/vibration) et suivi des équipements les plus sollicités.
 
 ---
 
-## 🧠 Comprendre les prédictions
+## 3. Comment interpréter les indicateurs et décider ?
 
-### Le score de santé machine (0 à 100%)
+### 3.1 Grille de lecture des scores IA et seuils métier
 
-Chaque machine dispose d'un **score de santé** mis à jour en continu :
+| Indicateur affiché | Niveau Vert (Nominal) | Niveau Orange (Vigilance) | Niveau Rouge (Action prioritaire) | Action métier recommandée |
+|--------------------|-----------------------|---------------------------|-----------------------------------|---------------------------|
+| **Probabilité IA de maintenance** | `< 30 %` (`low`) | `30 % – 60 %` (`medium`) / `60 % – 85 %` (`high`) | **`>= 85 %` (`critical`)** *(alerte active dès `50 %`)* | Contrôler physiquement la machine et préparer l'intervention préventive |
+| **Temps restant estimé (RUL)** | `>= 300 min` (`safe`) | `50 – 300 min` (`moderate` / `soon`) | **`< 50 min` (`urgent`)** | Planifier l'arrêt préventif avant la fin du créneau estimé (±27 min de marge moyenne) |
+| **Score d'anomalie capteur** | `>= 0` (`low`) | `-0,30 à 0` (`medium` / `high`) | **`< -0,30` (`critical`)** | Vérifier un comportement atypique inédit (capteur encrassé, outil usé, lot matière dur) |
+| **Seuils physiques directs** | Temp. `<= 85 °C`, Vibr. `<= 55 mm/s` | Temp. `85 – 100 °C`, Vibr. `55 – 70 mm/s` | **Temp. `> 100 °C` ou Vibr. `> 70 mm/s`** | Inspection immédiate du refroidissement, de la lubrification ou du palier de broche |
 
-| Plage | Interprétation |
-|-------|----------------|
-| **80 — 100%** | Excellent état, la machine fonctionne dans des conditions optimales |
-| **60 — 79%** | État correct, quelques paramètres à surveiller |
-| **40 — 59%** | Dégradation en cours, une maintenance préventive est recommandée |
-| **20 — 39%** | État critique, intervention fortement recommandée |
-| **0 — 19%** | Risque imminent de panne, arrêt de production possible |
+### 3.2 Procédure opérationnelle en 3 étapes devant une alerte
+1. **Vérifier le contexte dans la vue *Machine*** : regarder si la hausse est progressive (vraie dégradation mécanique/thermique) ou isolée sur une minute (transitoire de nettoyage ou changement de série).
+2. **Croiser avec le terrain** : contrôler visuellement/auditivement l'équipement et décider du créneau d'intervention avec le responsable de production (hors pic de charge critique si le RUL > 150 min le permet).
+3. **Qualifier l'alerte dans la vue *Accompagnement*** : enregistrer en 15 secondes votre verdict (*Intervention planifiée*, *Surveillance renforcée* ou *Fausse alerte*). Aucune donnée nominative n'est enregistrée (respect strict du RGPD).
 
-### La durée de vie restante (RUL)
-
-Le **RUL** (Remaining Useful Life, ou « durée de vie résiduelle ») est une estimation du temps restant avant qu'une panne ne se produise si aucune intervention n'est réalisée.
-
-> 💡 **Exemple concret** : Si le RUL d'une machine affiche « 120 min », cela signifie que selon les données des capteurs, la machine pourrait tomber en panne dans environ deux heures de production. C'est le moment de planifier une intervention à la prochaine pause, sans arrêter la ligne en urgence.
-
-> ℹ️ Dans cette version, le RUL est exprimé en **minutes de fonctionnement** sur une échelle de 0 à 500 min (horizon de la simulation). Il est recalculé à chaque nouvelle mesure.
-
-| RUL affiché | Catégorie | Interprétation | Recommandation |
-|-------------|-----------|----------------|----------------|
-| **≥ 300 min** | safe | Pas d'urgence | Intégrer dans la planification standard |
-| **150 à 300 min** | moderate | Attention requise | Planifier une intervention dans la journée |
-| **50 à 150 min** | soon | Urgence modérée | Intervention à la prochaine pause de production |
-| **< 50 min** | urgent | Urgence élevée | Intervention immédiate recommandée |
-
-### Le niveau de confiance
-
-Chaque prédiction est accompagnée d'un **niveau de confiance** (en %) qui indique la fiabilité de l'estimation :
-
-- **> 85%** : Forte confiance — vous pouvez vous appuyer sur cette prédiction pour planifier
-- **60 — 85%** : Confiance moyenne — à croiser avec votre expertise terrain
-- **< 60%** : Confiance faible — la prédiction est indicative, une vérification manuelle est recommandée
-
-> ⚠️ **Important** : Un niveau de confiance faible peut indiquer un comportement inhabituel de la machine que le système n'a pas encore appris. Signalez-le à l'équipe support.
+![Outil opérationnel de qualification terrain et de paramétrage des seuils](images/streamlit_accompagnement.png)
 
 ---
 
-## 🚨 Les alertes
+## 4. Conditions d'usage, limites connues et support
 
-### Types d'alertes
-
-| Type | Icône | Signification | Délai d'action |
-|------|-------|---------------|----------------|
-| **Alerte préventive** | 🟡 | Une dégradation est détectée, une maintenance est recommandée | Sous 7 jours |
-| **Alerte urgente** | 🔴 | Risque de panne imminent, intervention prioritaire | Sous 24-48h |
-| **Information** | 🔵 | Événement notable (ex : remplacement de capteur effectué) | Prise de connaissance |
-
-### Comment réagir à une alerte
-
-**Étape 1** — Consultez le détail de l'alerte (cliquez sur la ligne dans le tableau des alertes)
-
-**Étape 2** — Lisez la recommandation associée (type de vérification, composant concerné)
-
-**Étape 3** — Planifiez l'intervention si nécessaire
-
-**Étape 4** — Après l'intervention, marquez l'alerte comme « traitée » dans le système
-
-### Workflow de validation d'une alerte
-
-```
-Alerte reçue → Consultation détail → Décision (intervenir / surveiller)
-    → Si intervention : Créer ordre de maintenance → Réaliser → Clôturer
-    → Si surveillance : Programmer une vérification → Réévaluer
-```
-
----
-
-## 🔧 Planifier une maintenance
-
-Depuis le tableau de bord, vous pouvez créer un **ordre de maintenance** :
-
-1. Cliquez sur la machine concernée
-2. Sélectionnez **« Planifier maintenance »**
-3. Renseignez :
-   - Type d'intervention (préventive / corrective)
-   - Date souhaitée
-   - Description de l'intervention
-   - Technicien assigné (si applicable)
-4. Validez
-
-L'ordre de maintenance apparaîtra dans le **calendrier de maintenance** de votre site.
-
-### Priorisation des interventions
-
-Lorsque plusieurs alertes sont actives, le système vous propose un **ordre de priorité** basé sur :
-- Le niveau d'urgence (rouge avant orange)
-- L'impact production (machines critiques en premier)
-- La facilité d'intervention (regrouper les interventions proches)
-
----
-
-## ⚠️ Limites et conditions d'usage
-
-### Conditions de fiabilité des prédictions
-
-Pour que les prédictions soient fiables, il est important que :
-
-- ✅ Les capteurs fonctionnent correctement (pas de données manquantes)
-- ✅ La machine a été surveillée pendant au moins **2 semaines** (phase d'apprentissage)
-- ✅ Les conditions de fonctionnement sont dans la plage habituelle
-- ✅ Les maintenances réalisées sont enregistrées dans le système
-
-### Ce qui peut réduire la fiabilité
-
-- ❌ Un capteur défaillant ou mal calibré
-- ❌ Un changement soudain de production (nouveau matériau, vitesse inhabituelle)
-- ❌ Une machine récemment installée (historique insuffisant)
-
-### Que faire si les prédictions semblent incorrectes ?
-
-1. **Vérifiez les capteurs** — Un capteur défaillant peut fausser les données
-2. **Signalez-le** — Utilisez le bouton « Signaler un problème » sur la fiche machine
-3. **Continuez votre routine** — Le système s'améliore avec le temps et vos retours
-4. **Contactez le support** — L'équipe data ajustera le modèle si nécessaire
-
----
-
-## ❓ Questions fréquentes (FAQ)
-
-**Q : L'IA va-t-elle remplacer les techniciens de maintenance ?**  
-> Non. L'IA est un **outil d'aide à la décision**. C'est toujours le responsable maintenance qui décide des interventions. L'IA vous donne de l'information en plus, elle ne remplace pas votre expertise.
-
-**Q : Que se passe-t-il si je n'ai pas accès à Internet ?**  
-> Les données des capteurs continuent d'être collectées localement. Dès que la connexion est rétablie, les données sont synchronisées et les prédictions mises à jour.
-
-**Q : À quelle fréquence les prédictions sont-elles mises à jour ?**  
-> Les prédictions sont recalculées **toutes les heures** à partir des dernières données capteurs.
-
-**Q : Puis-je exporter les données pour mes rapports ?**  
-> Oui. Un bouton d'export (CSV / PDF) est disponible sur chaque page du tableau de bord.
-
-**Q : Comment signaler une fausse alerte ?**  
-> Cliquez sur l'alerte concernée et sélectionnez « Fausse alerte ». Cette information est précieuse car elle permet d'améliorer le modèle de prédiction.
-
-**Q : La solution fonctionne-t-elle pendant les arrêts de production ?**  
-> Le système continue de surveiller les machines même à l'arrêt. Les prédictions seront ajustées lors de la reprise de production.
-
----
-
-## 📞 Support et contacts
-
-| Type de besoin | Contact | Délai de réponse |
-|----------------|---------|-----------------|
-| **Problème d'accès** | Administrateur local de votre site | Sous 4h |
-| **Question sur une prédiction** | Équipe data MECHA Predict | Sous 24h |
-| **Bug ou dysfonctionnement** | Support technique : `support@mecha-predict.fr` | Sous 8h |
-| **Suggestion d'amélioration** | Via le bouton « Feedback » sur l'interface | Pris en compte mensuellement |
-
-> 💡 **Astuce** : Le bouton **« Aide »** (icône ❓) disponible sur chaque page vous donne accès à des explications contextuelles et des tutoriels vidéo.
-
----
-
-> **Document rédigé par** : Équipe projet MECHA  
-> **Dernière mise à jour** : 30/05/2026  
-> **Prochaine révision** : Après la phase pilote (retours utilisateurs Lyon)
+1. **Précision et marge d'incertitude** : le modèle détecte **90 % des besoins de maintenance** sur le périmètre qualifié (`F1 = 80,4 %`), et l'estimation RUL comporte une erreur moyenne de **±27 minutes** sur une fenêtre de 0 à 500 minutes. Ne jamais attendre `RUL = 0 min` pour intervenir sur une pièce aéronautique critique.
+2. **Pannes soudaines non progressives** : une rupture brutale d'alimentation électrique ou une casse accidentelle d'outil sans échauffement ni vibration préalable (~0,1 % des cas) ne peut pas être anticipée par les capteurs thermiques/vibratoires.
+3. **Capteur défaillant ou API hors ligne** : l'état de connexion de l'API IA est affiché en permanence dans le bandeau gauche (*API IA : Connectée : 4 modèles chargés*). En cas d'indisponibilité réseau, se référer aux seuils physiques Grafana et aux rondes standards.
+4. **Support & ajustement des seuils** : si un atelier génère trop d'alertes lors d'un usinage spécifique, le responsable maintenance peut ajuster les seuils directement dans l'onglet **Accompagnement → Paramétrage Seuils API** ou contacter le référent pilote IA du site.

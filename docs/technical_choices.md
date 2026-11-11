@@ -1,456 +1,164 @@
-# 🔬 Justification des Choix Techniques — MECHA Predict
+# Justification des Choix Techniques, Modèles IA et Structuration du Code — MECHA Predict
 
-> **Projet** : MECHA — Maintenance Prédictive par Intelligence Artificielle  
-> **Version** : 1.0  
-> **Date** : 30/05/2026  
-> **Auteurs** : Malek El Fayedh, Thibaut Doreau, Vincent Gonçalves, Pierre-Louis Guinel
-
----
-
-## 1. Introduction
-
-### 1.1 Objectif du document
-
-Ce document justifie chaque choix technique de la stack MECHA Predict. Pour chaque composant, nous présentons les alternatives considérées, les critères de sélection et les raisons du choix final. Ce document s'inscrit dans la continuité des conclusions de la **MSPR 1** (état de l'art sur la maintenance prédictive).
-
-### 1.2 Lien avec la MSPR 1
-
-L'état de l'art réalisé en MSPR 1 a permis d'identifier :
-- Les **algorithmes de ML** les plus adaptés à la maintenance prédictive industrielle
-- Les **architectures techniques** déployées dans l'industrie 4.0
-- Les **bonnes pratiques** en matière de collecte et traitement de données IoT
-- Les **limites** des approches existantes (deep learning trop complexe, données insuffisantes)
-
-Les choix techniques présentés ici sont directement guidés par ces conclusions.
-
-### 1.3 Critères de sélection
-
-| Critère | Description | Poids |
-|---------|-------------|:-----:|
-| **Maturité** | Stabilité, fiabilité, historique en production | 20% |
-| **Communauté** | Documentation, support, écosystème de plugins | 15% |
-| **Performance** | Vitesse, scalabilité, consommation de ressources | 20% |
-| **Coût** | Licence, infrastructure, maintenance | 15% |
-| **Compétences équipe** | Maîtrise par les membres de l'équipe projet | 20% |
-| **Adéquation métier** | Pertinence pour la maintenance prédictive industrielle | 10% |
+> **Projet** : MECHA Predict — Maintenance Prédictive Industrielle par IA  
+> **Certification** : RNCP35584 — Expert en Informatique et Système d'Information (Bloc 4 — MSPR TPRE841, suite de TPRE831)  
+> **Version** : 2.0  
+> **Date** : Mai 2026  
+> **Auteurs** : Malek El Fayedh, Thibaut Doreau, Vincent Gonçalves, Pierre-Louis Guinel  
+> **Compétences couvertes** : **C2 — Concevoir une architecture applicative** & **C3 — Développer une application métier**
 
 ---
 
-## 2. Langage de programmation — Python
+## 1. Introduction et Continuité avec la MSPR TPRE831
 
-### 2.1 Comparatif
+Ce document argumente chaque choix technologique, algorithmique et méthodologique de la plateforme **MECHA Predict**, dans la continuité directe de l'étude de faisabilité et du Proof of Concept réalisés lors de la **MSPR TPRE831**. Chaque brique est évaluée face à au moins trois alternatives industrielles selon une grille multicritère pondérée :
 
-| Critère | Python ✅ | R | Java | Julia |
-|---------|:--------:|:-:|:----:|:-----:|
-| Maturité | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
-| Écosystème ML | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
-| Écosystème Web/API | ⭐⭐⭐⭐⭐ | ⭐ | ⭐⭐⭐⭐ | ⭐⭐ |
-| Performance brute | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| Facilité d'apprentissage | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
-| Communauté | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ |
-| Compétences équipe | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐ |
-| Coût (licence) | Gratuit | Gratuit | Gratuit | Gratuit |
-
-### 2.2 Justification
-
-**Python** est le choix naturel pour ce projet car il est le **langage de référence en data science et machine learning**. Il permet de couvrir l'intégralité de la stack avec un seul langage :
-
-- **Data engineering** : pandas, NumPy, SQLAlchemy
-- **Machine learning** : scikit-learn, XGBoost
-- **API** : FastAPI
-- **Dashboard** : Streamlit
-- **IoT** : paho-mqtt
-
-**Pourquoi pas R ?** R excelle en statistiques et visualisation, mais son écosystème web/API est limité (Shiny vs FastAPI). Il aurait imposé un second langage pour l'API.
-
-**Pourquoi pas Java ?** Java est performant et robuste, mais plus verbeux. L'écosystème ML Java (Weka, DL4J) est moins riche que celui de Python. Le temps de développement aurait été significativement plus long.
-
-**Pourquoi pas Julia ?** Julia offre d'excellentes performances numériques, mais sa communauté est encore jeune et l'écosystème web/API est immature. Le risque de trouver peu de documentation et de support est trop élevé.
+| Critère de sélection | Description | Poids |
+|----------------------|-------------|:-----:|
+| **Maturité & Stabilité** | Fiabilité prouvée en environnement critique, support long terme | 20 % |
+| **Performance & Efficacité** | Latence d'inférence, empreinte mémoire, scalabilité multi-sites | 20 % |
+| **Compétences Équipe** | Maîtrise partagée par les 4 ingénieurs du groupe pour une vélocité optimale | 20 % |
+| **Écosystème & Pérennité** | Richesse documentaire, licences open-source sans *vendor lock-in* | 15 % |
+| **Coût Total (TCO)** | Licences logicielles, infrastructure matérielle et maintenance | 15 % |
+| **Adéquation Métier & Réglementaire** | Explicabilité IA (*EU AI Act*), traçabilité aéronautique *EN 9100* | 10 % |
 
 ---
 
-## 3. Framework Machine Learning — scikit-learn
+## 2. Langage de Programmation — Python 3.11
 
-### 3.1 Comparatif
+| Critère | Python 3.11 (Retenu) | R | Java 21 | Julia |
+|---------|:--------------------:|:-:|:-------:|:-----:|
+| Écosystème Data & ML | Excellent (scikit-learn, XGBoost, pandas) | Très bon | Moyen | Moyen |
+| Écosystème API & Web | Excellent (FastAPI, Pydantic, Streamlit) | Faible (Shiny) | Excellent (Spring) | Faible |
+| Performance d'exécution | Très bonne (noyaux C/C++ vectorisés) | Moyenne | Excellente | Excellente |
+| Lisibilité & Maintenabilité | Excellente (typage statique optionnel, Ruff) | Moyenne | Verbeux | Bonne |
 
-| Critère | scikit-learn ✅ | TensorFlow | PyTorch | H2O.ai |
-|---------|:--------------:|:----------:|:-------:|:------:|
-| Maturité | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
-| Modèles classiques (RF, XGB) | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ |
-| Deep Learning | ⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
-| Facilité d'utilisation | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
-| Interprétabilité | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐⭐ |
-| Taille des données | Moyen (RAM) | Très grande | Très grande | Grande |
-| Temps de prototypage | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
-| Documentation | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ |
-
-### 3.2 Justification
-
-**scikit-learn** est le choix optimal pour MECHA Predict car :
-
-1. **Modèles adaptés** : Random Forest et les modèles ensemblistes sont idéaux pour les données tabulaires industrielles
-2. **Interprétabilité** : Les modèles sont explicables (feature importance), ce qui est crucial pour obtenir la confiance des équipes maintenance
-3. **Rapidité de prototypage** : API unifiée (fit/predict/score) permettant d'itérer rapidement
-4. **Volume de données compatible** : Avec ~50 machines et quelques mois d'historique, les données tiennent en mémoire
-5. **Maturité exceptionnelle** : 15+ ans d'existence, API stable, excellente documentation
-
-**Pourquoi pas TensorFlow/PyTorch ?** Le deep learning est surdimensionné pour notre cas d'usage. Nos données sont tabulaires (pas d'images, pas de séquences très longues). Les modèles seraient des « boîtes noires » difficiles à expliquer aux équipes maintenance. De plus, le deep learning nécessite beaucoup plus de données que nous n'en avons actuellement.
+**Justification** : Python 3.11 unifie **100 % de la chaîne de valeur** (pipeline de données, entraînement ML, API REST asynchrone, dashboard analytique et tests automatisés) sans rupture technologique ni surcoût de sérialisation inter-langages.
 
 ---
 
-## 4. Algorithmes de prédiction — Random Forest + XGBoost
+## 3. Frameworks et Algorithmes de Machine Learning — scikit-learn & XGBoost
 
-### 4.1 Comparatif
+### 3.1 Pourquoi des modèles ensemblistes plutôt que du Deep Learning (LSTM / Transformer) ?
 
-| Critère | Random Forest ✅ | XGBoost ✅ | LSTM | SVM | Régression logistique |
-|---------|:---------------:|:---------:|:----:|:---:|:--------------------:|
-| Performance (données tabulaires) | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
-| Interprétabilité | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ |
-| Robustesse aux outliers | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐ | ⭐⭐ |
-| Gestion données manquantes | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐ | ⭐ |
-| Volume de données requis | Moyen | Moyen | Très élevé | Moyen | Faible |
-| Temps d'entraînement | Rapide | Rapide | Lent | Moyen | Très rapide |
-| Complexité d'implémentation | Faible | Faible | Élevée | Moyenne | Très faible |
-| Adapté séries temporelles | ⚠️ (avec features) | ⚠️ (avec features) | ✅ (natif) | ❌ | ❌ |
+| Critère | scikit-learn + XGBoost (Retenus) | TensorFlow / PyTorch (LSTM) | H2O AutoML |
+|---------|:--------------------------------:|:---------------------------:|:----------:|
+| Performance sur données tabulaires | **État de l'art** (F1 > 80 %, AUC 0.988) | Inférieure ou équivalente à faible volumétrie | Très bonne |
+| Explicabilité (*EU AI Act*) | **Native** (*Feature Importance* directe) | Boîte noire complexe | Partielle |
+| Infrastructure requise | CPU standard (< 12 s d'entraînement, < 10 ms/inférence) | GPU requis en entraînement | Lourd (JVM) |
 
-### 4.2 Stratégie à deux modèles
+### 3.2 Architecture multi-modèles retenue (5 modèles complémentaires)
 
-| Modèle | Rôle | Type | Sortie |
-|--------|------|------|--------|
-| **Random Forest** | Classification : « Risque de panne oui/non ? » | Classification binaire | 0 (normal) / 1 (panne imminente) + probabilité |
-| **RF Regressor** | Régression : « Dans combien de temps ? » (RUL) | Régression | Nombre de minutes estimé avant panne (0-500 min) |
-| **XGBoost** | Classification : modèle de secours du Random Forest | Classification binaire | 0 / 1 + probabilité |
+Contrairement à une approche mono-modèle, MECHA Predict couvre trois questions opérationnelles complémentaires sur **10 variables capteurs et temporelles** strictement exemptes de fuite de données (*Data Leakage* corrigé par exclusion de `machine_status`, `predicted_remaining_life` et `downtime_risk`) :
 
-### 4.3 Justification
+| Modèle | Algorithme exact (`train_models.py`) | Question métier traitée | Résultats sur jeu de test (22 000 lignes) |
+|--------|--------------------------------------|-------------------------|-------------------------------------------|
+| **Modèle principal** | `RandomForestClassifier` (`class_weight='balanced'`) | « Une maintenance est-elle requise ? » | **F1 = 80.43 %**, Rappel = **89.99 %**, AUC = **0.988** |
+| **Modèle challenger / secours** | `XGBClassifier` (`scale_pos_weight`) | Fallback supervisé haute précision | **F1 = 81.11 %**, Rappel = **88.64 %**, AUC = **0.988** |
+| **Baseline linéaire** | `LogisticRegression` + `StandardScaler` | Référence linéaire de contrôle | F1 = 23.33 %, Rappel = 92.01 %, AUC = 0.895 |
+| **Estimation RUL** | `RandomForestRegressor` (`n_estimators=100`) | « Combien de minutes restent avant panne ? » | **MAE = 26.94 min**, RMSE = 46.36 min, **R² = 0.719** |
+| **Détection d'anomalies** | `IsolationForest` (`contamination=0.05`) | « Le comportement capteur est-il inédit ? » | **AUC = 0.839**, Accuracy = 92.98 % |
 
-#### Random Forest (classification de panne)
-
-- **Robuste** : Résistant au surajustement grâce au bagging (agrégation de multiples arbres)
-- **Interprétable** : Feature importance native → « la température est le facteur principal de cette alerte »
-- **Peu de prétraitement** : Gère les features numériques sans normalisation
-- **Fiable** : Très peu de risque de prédiction aberrante
-
-#### XGBoost (estimation du RUL)
-
-- **Performance supérieure** : Boosting gradient = optimisation itérative qui maximise la précision
-- **Gestion native des données manquantes** : Important en contexte industriel (capteurs défaillants)
-- **Régularisation intégrée** : Prévient le surajustement
-- **Rapidité** : Très rapide en inférence, adapté au temps quasi-réel
-
-#### Pourquoi pas LSTM (deep learning) ?
-
-| Argument | Détail |
-|----------|--------|
-| **Données insuffisantes** | Le LSTM nécessite des milliers de séquences de panne pour apprendre. Avec ~50 machines et quelques mois d'historique, nous sommes très loin du compte. |
-| **Boîte noire** | Le LSTM ne fournit pas d'explication native. « Pourquoi cette alerte ? » reste sans réponse exploitable pour un technicien. |
-| **Complexité** | L'architecture LSTM (hyperparamètres, séquences, padding) est complexe à maintenir en production. |
-| **Surcoût** | Nécessite potentiellement un GPU, augmentant le coût d'infrastructure. |
-| **Évolution future** | Si le volume de données augmente significativement (> 2 ans d'historique), le LSTM pourra être envisagé en complément. |
+> **Conformité des données d'entraînement (Sujet p.4)** : aucune donnée industrielle confidentielle réelle n'est utilisée. Le corpus hybride associe **100 000 lignes simulées MECHA** et **10 000 lignes publiques communautaires** issues du benchmark ouvert **UCI AI4I 2020 Predictive Maintenance Dataset** (*CC BY 4.0*), avec split temporel 80/20 stratifié par source.
 
 ---
 
-## 5. Framework API — FastAPI
+## 4. Framework API — FastAPI + Pydantic
 
-### 5.1 Comparatif
+| Critère | FastAPI (Retenu) | Flask | Django REST Framework | Express.js |
+|---------|:----------------:|:-----:|:---------------------:|:----------:|
+| Débit asynchrone | ~15 000 req/s (Starlette/Uvicorn) | ~5 000 req/s | ~3 000 req/s | ~12 000 req/s |
+| Validation des entrées | **Pydantic v2 natif** (bornes physiques capteurs) | Manuelle | Serializers lourds | Externe (Zod) |
+| Documentation OpenAPI | **Swagger `/docs` auto-généré** | Extension tierce | Extension tierce | Manuelle |
 
-| Critère | FastAPI ✅ | Flask | Django REST | Express.js |
-|---------|:---------:|:-----:|:-----------:|:----------:|
-| Performance (req/s) | ~15 000 | ~5 000 | ~3 000 | ~12 000 |
-| Documentation auto (Swagger) | ✅ Natif | ❌ Manuel | ✅ (DRF) | ❌ Manuel |
-| Asynchrone | ✅ Natif (async/await) | ⚠️ Via extension | ⚠️ Via ASGI | ✅ Natif |
-| Validation données | ✅ Pydantic (natif) | ❌ Manuel | ✅ Serializers | ❌ Manuel |
-| Typage Python | ✅ Natif | ❌ | ✅ Partiel | N/A (JS) |
-| Courbe apprentissage | Faible | Très faible | Moyenne | Faible |
-| Taille framework | Léger | Très léger | Lourd | Léger |
-| WebSocket | ✅ | ⚠️ Via extension | ⚠️ Via channels | ✅ |
-| Langage | Python | Python | Python | JavaScript |
-
-### 5.2 Justification
-
-FastAPI est le choix idéal car :
-
-1. **Performance** : Le plus rapide des frameworks Python, comparable à Node.js/Go
-2. **Documentation automatique** : Swagger UI et ReDoc générés automatiquement depuis le code — indispensable pour une API de prédiction
-3. **Validation Pydantic** : Validation native des entrées/sorties avec des modèles typés — réduit les bugs et facilite la maintenance
-4. **Asynchrone natif** : Gestion efficace des requêtes concurrentes (important quand 50 machines interrogent l'API)
-5. **Même langage que le ML** : Pas de sérialisation/désérialisation complexe entre le modèle ML et l'API
-
-**Pourquoi pas Flask ?** Flask est plus simple mais n'offre pas de validation automatique ni de documentation Swagger native. Pour un prototype simple, Flask suffirait, mais pour une API de production exposant des modèles ML, FastAPI est supérieur.
-
-**Pourquoi pas Django REST ?** Trop lourd pour notre besoin. Django inclut un ORM, un admin, un système de templates — autant de fonctionnalités inutiles pour une API de prédiction.
-
-**Pourquoi pas Express.js ?** Imposerait un second langage (JavaScript) dans la stack, créant une rupture avec le pipeline ML en Python.
+**Justification** : FastAPI garantit la robustesse contractuelle des **9 routes REST** (`SensorInput`, `BatchInput`, `AlertThresholds`), la sécurité par en-tête `X-API-Key` et l'exposition temps réel des métriques d'entraînement.
 
 ---
 
-## 6. Dashboard / Visualisation — Streamlit + Grafana
+## 5. Stratégie Bi-Outils de Restitution — Grafana OSS + Streamlit
 
-### 6.1 Comparatif
+Dans la continuité de la MSPR TPRE831 (où **Grafana** avait été retenu pour le monitoring temps réel), la MSPR TPRE841 complète le dispositif par **Streamlit (6 vues métier)** afin de couvrir l'ensemble des usages opérationnels et analytiques :
 
-| Critère | Streamlit ✅ | Dash | Metabase | Power BI | Grafana ✅ |
-|---------|:-----------:|:----:|:--------:|:--------:|:---------:|
-| Langage | Python | Python | No-code | No-code | No-code + config |
-| Prototypage rapide | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| Personnalisation | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
-| Monitoring temps réel | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| Alerting natif | ❌ | ❌ | ⚠️ Limité | ⚠️ | ✅ Natif |
-| Connexion PostgreSQL | ✅ (via API) | ✅ | ✅ Natif | ✅ | ✅ Natif |
-| Coût | Gratuit | Gratuit | Gratuit (OSS) | Payant | Gratuit (OSS) |
-| Déploiement Docker | ✅ Simple | ✅ | ✅ | ❌ Cloud | ✅ |
-
-### 6.2 Stratégie à deux dashboards — Évolution MSPR 2
-
-> **Contexte** : En MSPR 1, **Grafana** a été retenu comme unique outil de restitution (Dashboard Groupe + Dashboard Site + Alertes). En MSPR 2, nous ajoutons **Streamlit** comme couche d'analyse complémentaire, répondant à des besoins que Grafana ne couvre pas nativement.
-
-| Outil | Public cible | Usage | Justification |
-|-------|-------------|-------|--------------| 
-| **Streamlit** | Équipe data, direction, responsables maintenance | Exploration données, analyse prédictions IA, comparaison de modèles, reporting interactif | **Ajout MSPR 2** — Prototypage Python ultra-rapide, intégration native avec les modèles ML |
-| **Grafana** | DG Groupe, directeurs d'usine, techniciens maintenance | Monitoring temps réel des capteurs, KPIs opérationnels, alertes visuelles | **Retenu en MSPR 1** — Standard industriel du monitoring, alerting natif (email/Slack) |
-
-#### Pourquoi ajouter Streamlit en complément de Grafana ?
-
-| Besoin | Grafana | Streamlit |
-|--------|:-------:|:---------:|
-| Monitoring temps réel des capteurs | ✅ Excellent | ⚠️ Limité (pas de refresh auto) |
-| Alertes opérationnelles (email/Slack) | ✅ Natif | ❌ Non supporté |
-| Exploration interactive des données | ⚠️ Limité (SQL figé) | ✅ Filtres dynamiques Python |
-| Visualisation des prédictions ML | ❌ Pas d'intégration ML | ✅ Chargement natif des modèles scikit-learn |
-| Comparaison de modèles (F1, AUC-ROC) | ❌ | ✅ Courbes ROC, matrice de confusion |
-| Feature importance et explicabilité IA | ❌ | ✅ Graphiques interactifs |
-| Vue consolidée multi-sites avec drill-down | ⚠️ Limité (variables) | ✅ Navigation Groupe → Site → Machine |
-| Prototypage rapide en Python | ❌ (JSON/YAML config) | ✅ 100% Python, itération rapide |
-
-**En résumé** : Grafana excelle pour le **monitoring opérationnel en temps réel** (ce pour quoi il a été retenu en MSPR 1). Streamlit apporte la couche d'**analyse IA et d'exploration de données** que Grafana ne couvre pas — c'est la valeur ajoutée de la MSPR 2. Un seul outil ne couvre pas les deux besoins de manière optimale.
+| Besoin opérationnel | Grafana OSS (3 dashboards) | Streamlit (6 vues métier) |
+|---------------------|:--------------------------:|:-------------------------:|
+| Supervision temps réel atelier / DG sur PostgreSQL | **Optimal** (`v_machine_status`) | Complémentaire |
+| Diagnostic interactif par machine via API ML (`/predict`, `/rul`, `/anomaly`) | Non natif | **Optimal** |
+| Explicabilité des modèles, courbes comparatives et audit par source | Non supporté | **Optimal** (Vue *Modèle IA*) |
+| Qualification *Human-in-the-Loop* (C8) & Paramétrage dynamique des seuils (C4) | Non supporté | **Optimal** (Vue *Accompagnement*) |
 
 ---
 
-## 7. Base de données — PostgreSQL
+## 6. Stockage Relationnel — PostgreSQL 15 Alpine
 
-### 7.1 Comparatif
-
-| Critère | PostgreSQL ✅ | MySQL | MongoDB | InfluxDB | TimescaleDB |
-|---------|:------------:|:-----:|:-------:|:--------:|:-----------:|
-| Type | Relationnel | Relationnel | Document (NoSQL) | Time-series | Time-series (ext. PG) |
-| SQL standard | ✅ Complet | ✅ Partiel | ❌ (MQL) | ⚠️ (InfluxQL/Flux) | ✅ Complet |
-| Séries temporelles | ⚠️ Correct | ⚠️ Faible | ⚠️ Faible | ✅ Excellent | ✅ Excellent |
-| Relations complexes | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Support JSON | ✅ (JSONB) | ⚠️ Basique | ✅ Natif | ❌ | ✅ (JSONB) |
-| Extensibilité | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐⭐ |
-| Performance écriture | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| Performance lecture | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| Communauté | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
-| Coût | Gratuit | Gratuit | Gratuit (Community) | Gratuit (OSS) | Gratuit (ext.) |
-
-### 7.2 Justification
-
-PostgreSQL est le choix optimal car :
-
-1. **Polyvalence** : Gère à la fois les données relationnelles (machines, usines, utilisateurs) ET les données semi-structurées (JSON des capteurs)
-2. **Extensibilité** : Possibilité d'ajouter **TimescaleDB** si les performances en séries temporelles deviennent insuffisantes — sans migration de base
-3. **Maturité** : 35+ ans d'existence, fiabilité prouvée en production industrielle
-4. **Conformité ACID** : Garantie d'intégrité des données — crucial pour la traçabilité (normes aéro)
-5. **Connexion native Grafana** : Grafana se connecte nativement à PostgreSQL sans middleware
-6. **Gratuit et open-source** : Pas de coût de licence, pas de vendor lock-in
-
-**Pourquoi pas MongoDB ?** Nos données ont des relations fortes (machine → capteurs → mesures → prédictions → alertes → maintenances). Un modèle relationnel est plus adapté qu'un modèle document.
-
-**Pourquoi pas InfluxDB ?** Excellent pour les séries temporelles pures, mais limité pour les requêtes relationnelles complexes. Aurait nécessité une deuxième base (PostgreSQL + InfluxDB), ajoutant de la complexité.
-
-**Pourquoi pas TimescaleDB directement ?** TimescaleDB est une extension de PostgreSQL. Nous commençons avec PostgreSQL pur et pourrons activer TimescaleDB si les volumes l'exigent — c'est une évolution naturelle, pas un changement de technologie.
+| Critère | PostgreSQL 15 (Retenu) | MongoDB | InfluxDB | MySQL 8 |
+|---------|:----------------------:|:-------:|:--------:|:-------:|
+| Intégrité relationnelle & ACID | **Complète** (4 tables + contraintes CHECK) | Partielle | Absente | Complète |
+| Support JSON semi-structuré | **JSONB indexable** (`features_json`) | Natif | Non | Limité |
+| Évolutivité séries temporelles | Extension **TimescaleDB** sans migration | Moyenne | Native | Faible |
+| Connecteur natif Grafana OSS | **Inclus par défaut** (`datasource.yml`) | Plugin Enterprise | Inclus | Inclus |
 
 ---
 
-## 8. Conteneurisation — Docker
+## 7. Conteneurisation et Orchestration — Docker & Docker Compose
 
-### 8.1 Comparatif
-
-| Critère | Docker ✅ | Podman | VM (VirtualBox) | Kubernetes | Bare metal |
-|---------|:--------:|:------:|:----------------:|:----------:|:----------:|
-| Isolation | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐ |
-| Légèreté | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
-| Portabilité | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐ |
-| Reproductibilité | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ |
-| Orchestration multi-service | ✅ (Compose) | ✅ (Compose) | ❌ | ✅ (natif) | ❌ |
-| Courbe d'apprentissage | Faible | Faible | Faible | Élevée | — |
-| Communauté | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | — |
-| Adapté à notre échelle | ✅ | ✅ | ❌ (trop lourd) | ❌ (trop complexe) | ⚠️ |
-
-### 8.2 Justification
-
-Docker + Docker Compose est le choix idéal car :
-
-1. **Reproductibilité** : Un `docker compose up` déploie toute la stack de manière identique en dev, staging et production
-2. **Simplicité** : Fichier YAML unique pour orchestrer 6 services (API, BDD, Streamlit, Grafana, MQTT, ML worker)
-3. **Isolation** : Chaque service est isolé dans son conteneur, évitant les conflits de dépendances
-4. **Portabilité** : Fonctionne sur n'importe quel serveur Linux — essentiel pour le déploiement multi-sites
-5. **Scalabilité future** : Migration possible vers Kubernetes si le besoin se fait sentir
-
-**Pourquoi pas Kubernetes ?** Kubernetes est un orchestrateur puissant mais surdimensionné pour 50 machines et 5-6 services. La complexité d'administration (cluster, networking, RBAC K8s) n'est pas justifiée à ce stade. Docker Compose couvre largement nos besoins.
-
-**Pourquoi pas des VM ?** Les VM sont plus lourdes (hyperviseur, OS complet par VM) et moins portables. Le déploiement et la mise à jour sont plus complexes.
+Docker Compose orchestre de manière déterministe **1 conteneur d'initialisation (`init-pipeline`)** et **4 services applicatifs (`db`, `api`, `dashboard`, `grafana`)**. Ce choix offre une reproductibilité immédiate sur tout serveur Linux tout en évitant la complexité d'administration prématurée d'un cluster Kubernetes pour un parc initial de 50 machines.
 
 ---
 
-## 9. CI/CD — GitHub Actions
+## 8. Qualité Continue et CI/CD — GitHub Actions & Ruff
 
-### 9.1 Comparatif
+| Critère | GitHub Actions + Ruff (Retenus) | Jenkins + Flake8/Black | GitLab CI |
+|---------|:-------------------------------:|:----------------------:|:---------:|
+| Infrastructure à maintenir | **Zéro** (runners managés GitHub) | Serveur JVM dédié | Externe au dépôt |
+| Vitesse de lint & formatage | **Ruff** (écrit en Rust, 10 à 50x plus rapide) | Lent (3 outils séparés) | Dépend de l'outil |
+| Validation bout-en-bout | Régénération data + 5 modèles + **104 tests Pytest** + Build Docker | Complexe à maintenir | Équivalent |
 
-| Critère | GitHub Actions ✅ | Jenkins | GitLab CI | CircleCI |
-|---------|:----------------:|:-------:|:---------:|:--------:|
-| Intégration Git | ✅ Natif GitHub | Via plugin | ✅ Natif GitLab | Via intégration |
-| Configuration | YAML (simple) | Groovy (complexe) | YAML | YAML |
-| Hébergement | SaaS (aucune infra) | Auto-hébergé (serveur) | SaaS ou self-hosted | SaaS |
-| Coût (public) | Gratuit | Gratuit + coût serveur | Gratuit (400 min/mois) | Gratuit (limité) |
-| Runners personnalisés | ✅ (self-hosted) | ✅ (agents) | ✅ (runners) | ⚠️ Limité |
-| Marketplace d'actions | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ (plugins) | ⭐⭐⭐ | ⭐⭐⭐ |
-| Secrets management | ✅ Natif | ✅ (Credentials) | ✅ Natif | ✅ Natif |
-| Containers Docker | ✅ | ✅ | ✅ | ✅ |
-| Matrix builds | ✅ | ⚠️ (complexe) | ✅ | ✅ |
+---
 
-### 9.2 Justification
+## 9. Principes de Structuration du Code et Modalités de Gestion du Code Source (Git / GitHub)
 
-GitHub Actions est le choix naturel car :
+Conformément aux exigences du sujet MSPR TPRE841 concernant l'ingénierie logicielle, le projet applique des standards stricts de structuration et de versionnement :
 
-1. **Intégration native** : Le code est hébergé sur GitHub → pas de configuration de webhook ou d'intégration tierce
-2. **Zéro infrastructure** : Pas de serveur Jenkins à maintenir, pas de mises à jour de sécurité
-3. **Configuration YAML** : Simple, versionnable, lisible — un développeur junior peut la comprendre
-4. **Marketplace riche** : Actions réutilisables pour Docker, pytest, linting, deployment
-5. **Secrets intégrés** : Gestion native des clés API, mots de passe BDD, tokens
+### 9.1 Architecture modulaire du code source (*Separation of Concerns*)
+Le dépôt est découpé en **modules indépendants et faiblement couplés** :
+- **`data/scripts/`** : ingestion, simulation physique (`generate_data.py`) et fusion/harmonisation typée (`merge_datasets.py`). Aucune dépendance vers l'API ou l'UI.
+- **`models/training/`** : entraînement reproductible (`RANDOM_STATE = 42`), validation croisée temporelle et export des artefacts compressés (`models/saved_models/`) et métriques (`models/evaluation/results/`).
+- **`api/`** : couche de service REST autonome (`api/main.py`, `api/Dockerfile` multi-stage exécuté sous utilisateur non-root `appuser`).
+- **`app/`** : client léger de présentation (`app/src/dashboard.py`) consommant exclusivement les endpoints HTTP de l'API pour l'inférence ML (aucun couplage direct aux fichiers `.joblib`).
+- **`db/` & `grafana/`** : *Infrastructure-as-Code* SQL et provisioning YAML/JSON déclaratif.
+- **`tests/` & `api/tests/`** : **104 tests automatisés** organisés selon la pyramide de tests (qualité données, modèles ML, contrat API, intégration bout-en-bout).
 
-**Pourquoi pas Jenkins ?** Jenkins est puissant et flexible, mais nécessite un serveur dédié, une maintenance régulière (mises à jour Java, plugins), et une configuration en Groovy plus complexe. Pour une équipe de 4 personnes, c'est un overhead injustifié.
+### 9.2 Conventions de codage et qualité statique
+- **Standardisation par `ruff.toml`** : longueur de ligne fixée à `120` caractères, cible `py311`, règles activées `E4, E7, E9, F, I` (tri automatique des imports et détection du code mort ou invalide).
+- **Typage explicite et docstrings** : annotations de types Python (`dict[str, Any]`, modèles `BaseModel` Pydantic) et documentation systématique des fonctions métiers.
+- **Sécurité des secrets (*12-Factor App*)** : aucune clé ou mot de passe en dur dans le code ; configuration par variables d'environnement avec modèle `.env.example` versionné et `.env` exclu via `.gitignore`.
 
-### 9.3 Pipeline prévu
-
+### 9.3 Modalités de gestion du code source (GitHub Flow & Pull Requests)
 ```mermaid
-graph LR
-    A["Push / PR"] --> B["📋 Lint<br/>(flake8, black,<br/>isort)"]
-    B --> C["🧪 Tests unitaires<br/>(pytest +<br/>coverage ≥ 80%)"]
-    C --> D["🧪 Tests intégration<br/>(Docker Compose<br/>test)"]
-    D --> E["🐳 Build images<br/>Docker"]
-    E --> F{"🔀 Branche ?"}
-    F -->|develop| G["Deploy<br/>staging"]
-    F -->|main| H["Tag +<br/>Release"]
-    H --> I["Deploy<br/>production"]
-    G --> J["🔥 Smoke tests"]
-    I --> J
-    J --> K["✅ OK"]
+flowchart LR
+    MAIN["Branche main<br/>(stable, protégée)"] --> FEAT["Branche fonctionnelle<br/>feat/* ou fix/*"]
+    FEAT --> COMMIT["Commits atomiques<br/>(feat:, fix:, docs:, test:)"]
+    COMMIT --> PR["Pull Request GitHub<br/>Revue par les pairs"]
+    PR --> CI["GitHub Actions (bloquant)<br/>1. Ruff • 2. 104 tests • 3. Docker Build"]
+    CI --> MERGE["Fusion sur main<br/>& Tag de version"]
 ```
+- **Workflow de branches (*GitHub Flow*)** : la branche `main` demeure en permanence déployable. Toute évolution fonctionnelle ou corrective est développée sur une branche dédiée (`feat/...`, `fix/...`, `docs/...`).
+- **Conventions de commits (*Conventional Commits*)** : messages préfixés (`feat:`, `fix:`, `docs:`, `test:`, `ci:`) assurant un historique Git lisible et auditable par les 4 membres de l'équipe.
+- **Gestion des artefacts lourds** : les fichiers binaires volumineux ou régénérables sont contrôlés via `.gitignore` et reconstruits automatiquement en moins de 15 secondes par la pipeline CI/CD et par le conteneur `init-pipeline`, garantissant une **reproductibilité déterministe à 100 %**.
 
 ---
 
-## 10. Synthèse globale de la stack
+## 10. Synthèse Récapitulative et Trajectoire d'Évolution
 
-### 10.1 Vue d'ensemble
-
-```mermaid
-graph TD
-    subgraph "📡 Collecte"
-        MQTT["MQTT<br/>(Mosquitto)"]
-        PAHO["paho-mqtt<br/>(Python)"]
-    end
-    
-    subgraph "🐍 Langage"
-        PY["Python 3.11"]
-    end
-    
-    subgraph "💾 Stockage"
-        PG["PostgreSQL 16"]
-    end
-    
-    subgraph "🧠 ML"
-        SK["scikit-learn"]
-        RF["Random Forest"]
-        XGB["XGBoost"]
-    end
-    
-    subgraph "🌐 API"
-        FAST["FastAPI"]
-    end
-    
-    subgraph "📊 Visualisation"
-        ST["Streamlit"]
-        GR["Grafana"]
-    end
-    
-    subgraph "🔧 Infra"
-        DOCK["Docker +<br/>Docker Compose"]
-        GH["GitHub Actions"]
-    end
-    
-    MQTT --> PAHO
-    PY --> SK & FAST & ST & PAHO
-    SK --> RF & XGB
-    PG --> FAST & GR
-    FAST --> ST
-    DOCK -.-> FAST & ST & GR & PG & MQTT
-    GH -.-> DOCK
-```
-
-### 10.2 Tableau récapitulatif
-
-| Composant | Choix | Alternative principale | Raison du choix |
-|-----------|-------|----------------------|-----------------|
-| **Langage** | Python | R, Java | Écosystème ML + API unifié, compétences équipe |
-| **Framework ML** | scikit-learn | TensorFlow, PyTorch | Modèles interprétables, prototypage rapide, données tabulaires |
-| **Algorithme (classification)** | Random Forest | SVM, Régression logistique | Robuste, interprétable, peu de prétraitement |
-| **Algorithme (régression)** | XGBoost | LSTM, SVR | Performance élevée, gestion données manquantes |
-| **Framework API** | FastAPI | Flask, Django REST | Performance, doc auto, validation Pydantic |
-| **Dashboard analytique** | Streamlit | Dash, Metabase | Prototypage Python, interactivité |
-| **Monitoring temps réel** | Grafana | Kibana, Datadog | Standard industriel, alerting natif, connexion PG |
-| **Base de données** | PostgreSQL | MongoDB, InfluxDB | Polyvalent, extensible (TimescaleDB), ACID |
-| **Conteneurisation** | Docker + Compose | Kubernetes, VM | Simple, reproductible, adapté à notre échelle |
-| **CI/CD** | GitHub Actions | Jenkins, GitLab CI | Intégration native GitHub, zéro infra, YAML |
-| **Broker IoT** | MQTT (Mosquitto) | Kafka, RabbitMQ | Standard IoT, léger, fiable |
+| Composant | Choix MSPR TPRE841 (Livré) | Évolution cible à 12–18 mois (> 100 machines) |
+|-----------|----------------------------|-----------------------------------------------|
+| **Langage & Qualité** | Python 3.11 + Ruff (`ruff.toml`) + Pytest (104 tests) | Tests de charge Locust + analyse SAST SonarQube |
+| **Modèles IA** | Random Forest, XGBoost, RF Regressor RUL, Isolation Forest | Registre **MLflow** + modèles séquentiels LSTM/Temporal Fusion |
+| **API & Sécurité** | FastAPI (9 routes) + Pydantic + `X-API-Key` | Passerelle API OAuth2 / OIDC (Keycloak) |
+| **Stockage** | PostgreSQL 15 Alpine (4 tables, vue `v_machine_status`, 11 index) | Activation de l'extension **TimescaleDB** + cache **Redis** |
+| **Restitution** | Grafana OSS (3 dashboards) + Streamlit (6 vues dont C8/C4) | Portail web unifié + connecteur bidirectionnel GMAO / ERP |
+| **Déploiement** | Docker Compose (`init-pipeline` + 4 services) | Orchestration multi-sites **Kubernetes (K3s Edge)** |
 
 ---
 
-## 11. Lien avec la MSPR 1
-
-### 11.1 Conclusions de l'état de l'art appliquées
-
-| Conclusion MSPR 1 | Application dans MECHA Predict |
-|-------------------|-------------------------------|
-| Les modèles ensemblistes (RF, XGBoost) sont les plus performants sur les données industrielles tabulaires | ✅ Choix de Random Forest + XGBoost |
-| Le deep learning (LSTM) nécessite un volume de données très important | ✅ Non retenu pour la V1, prévu comme évolution future |
-| L'interprétabilité des modèles est un facteur clé d'adoption en industrie | ✅ Feature importance native des modèles choisis |
-| Les architectures IoT modernes utilisent MQTT comme protocole standard | ✅ Choix de MQTT (Mosquitto) |
-| La conteneurisation facilite le déploiement multi-sites | ✅ Docker + Docker Compose |
-| La maintenance prédictive nécessite une phase pilote avant généralisation | ✅ Déploiement progressif (Lyon → France → Espagne) |
-
-### 11.2 Évolutions possibles (guidées par l'état de l'art)
-
-| Horizon | Évolution | Condition de déclenchement |
-|---------|-----------|---------------------------|
-| Court terme (6 mois) | **TimescaleDB** : extension PostgreSQL pour séries temporelles | Volume > 10 Go/mois |
-| Court terme (6 mois) | **Redis** : cache pour les prédictions fréquentes | Latence API > 500ms |
-| Moyen terme (12 mois) | **MLflow** : versioning des modèles ML | Plus de 3 modèles en production |
-| Moyen terme (12 mois) | **Apache Kafka** : remplacement MQTT pour le streaming | Volume > 100 machines |
-| Long terme (18+ mois) | **LSTM / Transformer** : deep learning si données suffisantes | > 2 ans d'historique, > 100 machines |
-| Long terme (18+ mois) | **Kubernetes** : orchestration pour le multi-sites | > 10 sites ou microservices |
-
----
-
-## 12. Limites et axes d'amélioration
-
-### 12.1 Limites identifiées
-
-| Limite | Impact | Mitigation |
-|--------|--------|-----------|
-| **Pas de deep learning** | Potentiellement moins performant sur les séquences longues | Prévu en évolution si données suffisantes |
-| **Base centralisée** | Point unique de défaillance | Backup quotidien + buffer local |
-| **Pas de MLOps** | Suivi manuel des modèles | MLflow prévu en phase 2 |
-| **Streamlit = prototypage** | Interface moins « professionnelle » qu'une app custom | Suffisant pour la V1, refonte React possible en V2 |
-| **Docker Compose ≠ Kubernetes** | Pas d'auto-scaling, pas de self-healing natif | Adapté à notre échelle, migration K8s possible |
-
-### 12.2 Dette technique identifiée
-
-| Élément | Risque | Plan de remédiation |
-|---------|:------:|-------------------|
-| Modèles ML sérialisés en fichiers (joblib) | Moyen | Migration vers MLflow (versioning, A/B testing) |
-| Pas de monitoring applicatif (APM) | Faible | Intégration Prometheus + Grafana (métriques app) |
-| Pas de queue de messages (async processing) | Faible | Redis Queue ou Celery si besoin de traitement différé |
-
----
-
-> **Document validé par** : Équipe projet MECHA  
-> **Prochaine révision** : Après la phase pilote (Lyon) — ajustement des choix si nécessaire
+> **Document validé par** : Équipe projet MECHA — Mai 2026

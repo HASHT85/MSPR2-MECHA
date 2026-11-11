@@ -155,3 +155,77 @@ class TestDataConsistency:
         """Le score de risque doit etre entre 0 et 1."""
         assert dataset["downtime_risk"].min() >= 0, "downtime_risk < 0"
         assert dataset["downtime_risk"].max() <= 1.01, "downtime_risk > 1"
+
+
+class TestPostgreSQLCopyCompatibility:
+    """Verifie que le CSV exporte est 100% compatible avec PostgreSQL \\COPY."""
+
+    def test_integer_columns_have_no_float_suffix_in_csv(self):
+        csv_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "data",
+            "processed",
+            "mecha_dataset_processed.csv",
+        )
+        if not os.path.exists(csv_path):
+            pytest.skip("Dataset CSV non disponible")
+
+        raw_ints = pd.read_csv(
+            csv_path,
+            usecols=["rotational_speed_rpm", "tool_wear_min", "machine_id"],
+            dtype=str,
+            keep_default_na=False,
+        )
+        for col in ["rotational_speed_rpm", "tool_wear_min", "machine_id"]:
+            non_empty = raw_ints[col][raw_ints[col] != ""]
+            bad = non_empty[~non_empty.str.fullmatch(r"-?\d+")]
+            assert len(bad) == 0, (
+                f"Colonne INTEGER {col} contient des flottants incompatibles PostgreSQL COPY : {bad.head(5).tolist()}"
+            )
+
+    def test_csv_column_order_matches_sql_loader(self):
+        csv_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "data",
+            "processed",
+            "mecha_dataset_processed.csv",
+        )
+        if not os.path.exists(csv_path):
+            pytest.skip("Dataset CSV non disponible")
+
+        header = pd.read_csv(csv_path, nrows=0).columns.tolist()
+        expected = [
+            "timestamp",
+            "machine_id",
+            "usine_id",
+            "usine_nom",
+            "usine_pays",
+            "ligne_production",
+            "type_piece",
+            "machine_profile",
+            "temperature",
+            "vibration",
+            "humidity",
+            "pressure",
+            "energy_consumption",
+            "machine_status",
+            "anomaly_flag",
+            "predicted_remaining_life",
+            "failure_type",
+            "maintenance_required",
+            "maintenance_type",
+            "temp_rolling_10min",
+            "temp_trend_1h",
+            "vibr_rolling_10min",
+            "temp_std_30min",
+            "energy_vibr_ratio",
+            "downtime_risk",
+            "data_source",
+            "torque_nm",
+            "rotational_speed_rpm",
+            "tool_wear_min",
+            "product_quality",
+        ]
+        assert header == expected, f"Ordre CSV inattendu : {header}"

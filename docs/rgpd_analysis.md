@@ -441,19 +441,37 @@ graph TD
 
 ---
 
-## 11. Synthèse
+## 11. Conformité Confidentialité Industrielle et Règlement Européen sur l'IA (EU AI Act)
+
+### 11.1 Respect strict de la confidentialité industrielle (Cahier des charges p.4)
+Conformément à l'exigence stricte du cahier des charges (*« Pour des raisons de confidentialité et de protection des informations industrielles, aucun jeu de données réelles ne pourra être utilisé »*) :
+- **Aucune donnée industrielle privée ou confidentielle** d'une entreprise réelle n'est exploitée dans le prototype.
+- Le corpus de 110 000 lignes repose exclusivement sur **100 000 mesures synthétiques simulées** (`generate_data.py`, `seed=42`) et **10 000 enregistrements du jeu public communautaire académique *AI4I 2020 Predictive Maintenance*** (UCI Machine Learning Repository / Kaggle, licence ouverte CC BY 4.0).
+- Le module de retour terrain (*Qualification Terrain* dans Streamlit) trace uniquement la **fonction métier générique** (*Technicien Maintenance*, *Opérateur de ligne*) sans nom, matricule ni badge salarié.
+
+### 11.2 Articulation avec le Règlement (UE) 2024/1689 (*EU AI Act*)
+
+| Exigence EU AI Act | Qualification pour MECHA Predict | Dispositif technique mis en œuvre |
+|--------------------|----------------------------------|-----------------------------------|
+| **Classification de risque** | **Risque limité / minimal** (aide à la décision maintenance sans commande directe d'organe de sécurité machine) | Aucun actionnement automatique d'automate PLC/SCADA ; validation humaine obligatoire |
+| **Contrôle humain (Art. 14 — *Human-in-the-Loop*)** | **Obligatoire et actif** | Bandeau de conformité permanent, vue *Accompagnement* permettant d'approuver ou d'écarter (*Fausse alerte*) toute recommandation IA |
+| **Transparence & documentation technique (Art. 11 & 13)** | **5 *Model Cards* normalisées + endpoint `/model-info`** | Documentation complète des features (10 capteurs), exclusions anti-leakage, métriques par source et limites connues |
+| **Gouvernance des données (Art. 10)** | **Traçabilité par source (`data_source`)** | Séparation explicite `MECHA_simulated` / `AI4I_2020_real`, tests automatisés de qualité (`26` tests `pytest`) |
+
+---
+
+## 12. Synthèse générale RGPD & IA
 
 | Question | Réponse |
 |----------|---------|
-| **Des données personnelles sont-elles traitées ?** | Minimalement (emails, logs). Principalement des données machine. |
-| **Une PIA est-elle nécessaire ?** | ❌ Non, dans la configuration actuelle (données machine uniquement) |
-| **Une PIA serait-elle nécessaire avec des données opérateurs ?** | ✅ Oui, obligatoire (surveillance + IA + données salariés) |
-| **Les données sortent-elles de l'UE ?** | ❌ Non (hébergement France) |
-| **Un DPO est-il nécessaire ?** | Recommandé (bonne pratique + taille entreprise) |
-| **Le registre des traitements est-il obligatoire ?** | ✅ Oui (entreprise > 250 salariés) |
+| **Des données réelles confidentielles ou nominatives sont-elles utilisées dans le PoC ?** | ❌ **Aucune** (simulation + dataset ouvert UCI AI4I 2020 ; retours terrain 100 % anonymes par rôle). |
+| **Une PIA (AIPD) est-elle nécessaire en configuration actuelle ?** | ❌ Non (données techniques machines uniquement, absence de profilage salarié). |
+| **Une PIA serait-elle nécessaire si MECHA couplait l'IA aux badges opérateurs ?** | ✅ Oui, obligatoire avant mise en œuvre (Art. 35 RGPD + consultation du CSE + pseudonymisation HMAC-SHA256). |
+| **Les données sortent-elles de l'Union Européenne ?** | ❌ Non (hébergement cible France/Espagne soumis au RGPD et à la directive NIS 2). |
+| **Quel est le rôle du DPO ?** | Tenue du registre Art. 30, validation du principe *Privacy by Design*, contrôle des durées de rétention (2 ans capteurs / 6 mois logs) et revue d'impact en cas d'évolution fonctionnelle. |
 
 ---
 
 > **Document validé par** : Équipe projet MECHA  
 > **À soumettre pour validation** : DPO de MECHA (à désigner)  
-> **Prochaine révision** : Avant le déploiement Phase 1
+> **Prochaine révision** : Avant le déploiement Phase 1 (pilote Lyon)

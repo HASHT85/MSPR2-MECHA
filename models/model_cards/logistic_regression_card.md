@@ -37,9 +37,10 @@ Fournir une baseline de performance pour la classification de maintenance. Si le
 ## Donnees d'Entrainement
 
 ### Source
-- **Dataset** : `mecha_dataset_processed.csv`
-- **Volume** : ~100,000 lignes
-- **Split** : Temporel 80/20 (identique aux autres modeles)
+- **Dataset** : `mecha_dataset_processed.csv` (simulation MECHA + jeu public UCI AI4I 2020)
+- **Volume** : 110 000 lignes (88 000 train / 22 000 test)
+- **Usines** : 5 sites MECHA (3 en France, 2 en Espagne)
+- **Split** : Temporel 80/20 par source de donnees (identique aux autres modeles)
 
 ### Preprocessing specifique
 - **StandardScaler** : Normalisation des features (moyenne=0, ecart-type=1)
@@ -85,13 +86,13 @@ Fournir une baseline de performance pour la classification de maintenance. Si le
 
 > Sauvegardees dans `models/evaluation/results/logistic_regression_metrics.json`.
 
-| Metrique | Description |
-|----------|-------------|
-| **Accuracy** | Taux de predictions correctes |
-| **Precision** | Vrais positifs / predictions positives |
-| **Recall** | Vrais positifs / reels positifs |
-| **F1-Score** | Moyenne harmonique |
-| **AUC-ROC** | Discrimination du modele |
+| Metrique | Valeur sur jeu de test (n = 22 000) | Description |
+|----------|:-----------------------------------:|-------------|
+| **Accuracy** | **71.43 %** | Taux de predictions correctes |
+| **Precision** | **13.36 %** | Vrais positifs / predictions positives (nombreux faux positifs lineaires) |
+| **Recall** | **92.01 %** | Vrais positifs / reels positifs |
+| **F1-Score** | **23.33 %** | Moyenne harmonique (demontre le gain massif de RF 80.4 % et XGBoost 81.1 %) |
+| **AUC-ROC** | **89.47 %** | Discrimination du modele |
 
 ### Interpretation des coefficients
 La regression logistique permet d'interpreter directement l'influence de chaque feature :
