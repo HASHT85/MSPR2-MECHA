@@ -11,11 +11,9 @@ Ouvrez un terminal (**PowerShell** sur Windows, ou **Terminal** sur macOS/Linux)
 ```bash
 git clone https://github.com/HASHT85/MSPR2-MECHA.git
 cd MSPR2-MECHA
-git checkout feat/conformity-tpre841-deliverables
-git pull
 ```
 
-*(Si le dépôt est déjà cloné sur votre PC : faites simplement `git fetch --all && git checkout feat/conformity-tpre841-deliverables && git pull`.)*
+*(Si le dépôt est déjà cloné sur votre PC : faites simplement `git checkout main && git pull --prune`.)*
 
 ### Premier lancement de chauffe (« Warm-up »)
 Lancez le script une première fois chez vous avec une bonne connexion :
