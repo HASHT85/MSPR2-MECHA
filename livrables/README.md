@@ -9,7 +9,7 @@ Ce dossier regroupe l'ensemble des documents finaux prêts à être transmis au 
 ---
 
 ## `01_Dossier_Global/`
-- **`00_Compte_Rendu_Global_MSPR_TPRE841_MECHA.pdf`** *(17 pages)* : Dossier maître consolidé regroupant de manière dissociée et argumentée l'ensemble des livrables d'aide à la décision (collecte des besoins C1, architecture C2, modélisation IA & AMDEC C3, solution applicative C4, tests C5, CI/CD C6, documentation C7, conduite du changement C8, RGPD/EU AI Act et déploiement multi-sites).
+- **`00_Compte_Rendu_Global_MSPR_TPRE841_MECHA.pdf`** *(18 pages)* : Dossier maître consolidé regroupant de manière dissociée et argumentée l'ensemble des livrables d'aide à la décision (collecte des besoins C1, BPMN 2.0 `AS-IS`/`TO-BE`, architecture C2, modélisation IA & AMDEC C3, solution applicative C4, tests C5, CI/CD C6, documentation C7, conduite du changement C8, RGPD/EU AI Act, déploiement multi-sites et traçabilité des prompts IA générative en Section 15.3).
 
 ## `02_Documentation_et_Validation/`
 Les 11 dossiers thématiques individuels paginés en A4 :
@@ -26,5 +26,5 @@ Les 11 dossiers thématiques individuels paginés en A4 :
 11. **`11_Modelisation_Processus_BPMN_AS_IS_TO_BE_C1_C8.pdf`** — Modélisation normalisée OMG BPMN 2.0 des workflows de maintenance (`AS-IS` vs `TO-BE` *Human-in-the-Loop*, fichiers XML sources disponibles dans `docs/bpmn/`).
 
 ## `03_Support_Soutenance/`
-- **`Support_Soutenance_MECHA_TPRE841.pptx`** — Support PowerPoint éditable (16 slides 16:9 calibrées pour 20 minutes à 4 intervenants, avec minutage en notes).
-- **`Support_Soutenance_MECHA_TPRE841.pdf`** — Version PDF vectorielle identique du support de présentation.
+- **`Support_Soutenance_MECHA_TPRE841.pptx`** — Support PowerPoint éditable (18 slides 16:9 intégrant visuels applicatifs, schémas d'architecture/SQL/CI, flux BPMN 2.0 `AS-IS`/`TO-BE`, extraits de code et notes de passage chronométrées pour 20 min à 4 intervenants).
+- **`Support_Soutenance_MECHA_TPRE841.pdf`** — Version PDF vectorielle 16:9 identique au support PowerPoint.
